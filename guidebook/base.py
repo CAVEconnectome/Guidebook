@@ -25,11 +25,19 @@ def process_mesh(oid, client, mm, min_component_size=1000):
     return meshf
 
 
-def process_skeleton(mesh, soma_loc=None, root_loc=None, close_mean=10000, sk_kwargs={}):
+def process_skeleton(mesh, root_loc=None, root_is_soma=False, close_mean=10000, sk_kwargs={}):
+    if root_is_soma:
+        soma_loc = root_loc
+    else:
+        soma_loc = None
     sk = skeletonize.skeletonize_mesh(mesh,
                                       soma_pt=soma_loc,
                                       **sk_kwargs)
-    # TODO reroot to root_loc
+
+    if not root_is_soma and root_loc is not None:
+        _, skind = sk.kdtree.query(root_loc)
+        sk.reroot(skind)
+
     _, lbls = sparse.csgraph.connected_components(sk.csgraph)
     _, cnt = np.unique(lbls, return_counts=True)
 
@@ -135,7 +143,8 @@ def generate_proofreading_state(datastack,
                                 root_id,
                                 branch_points=True,
                                 end_points=True,
-                                soma_point=None,
+                                root_loc=None,
+                                root_is_soma=False,
                                 auth_token=None,
                                 return_as='html',
                                 min_mesh_component_size=1000,
@@ -146,7 +155,8 @@ def generate_proofreading_state(datastack,
         cache_size=0, cv_path=client.info.segmentation_source())
     mesh = process_mesh(root_id, client, mm,
                         min_component_size=min_mesh_component_size)
-    skf = process_skeleton(mesh, soma_loc=soma_point, sk_kwargs=SK_KWARGS)
+    skf = process_skeleton(mesh, root_loc=root_loc,
+                           root_is_soma=root_is_soma, sk_kwargs=SK_KWARGS)
     pf_sb, sb_dfs = process_points_from_skeleton(root_id, skf, client)
 
     state = pf_sb.render_state(
