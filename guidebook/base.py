@@ -55,7 +55,32 @@ def process_skeleton(mesh, root_loc=None, root_is_soma=False, close_mean=10000, 
     return skout
 
 
-def proofer_statebuilder(oid, client, bp_proofreading_tags=[], ep_proofreading_tags=[]):
+def base_sb_data(client, oid, focus_loc=None, fixed_ids=[], black=0.35, white=0.7, view_kws={}):
+    state_server = client.state.state_service_endpoint
+    img = sb.ImageLayerConfig(client.info.image_source(),
+                              contrast_controls=True,
+                              black=black, white=white)
+    seg = sb.SegmentationLayerConfig(client.info.segmentation_source(),
+                                     fixed_ids=[oid],
+                                     view_kws={'alpha_selected': 0.2, 'alpha_3d': 0.6})
+    view_kws = {'layout': '3d'}
+    view_kws['position'] = focus_loc
+    sb_ep = sb.StateBuilder(layers=[img, seg],
+                            state_server=state_server, view_kws=view_kws)
+    return sb_base, None
+
+
+def branch_sb_data(client, oid, skf, tags=[], active=False, color='#299bff'):
+    points_bp = sb.PointMapper(
+        point_column='bp_locs', group_column='bp_group', set_position=bp_active)
+    bp_layer = sb.AnnotationLayerConfig(
+        'branch_points', mapping_rules=points_bp, active=active, color=color, tags=tags)
+    sb_bp = sb.StateBuilder(layers=[bp_layer])
+
+    return sb_bp, df
+
+
+def proofer_statebuilder(oid, client, root_pt=None, bp_proofreading_tags=[], ep_proofreading_tags=[], bp_active=False):
 
     state_server = client.state.state_service_endpoint
     img = sb.ImageLayerConfig(client.info.image_source(),
@@ -66,7 +91,7 @@ def proofer_statebuilder(oid, client, bp_proofreading_tags=[], ep_proofreading_t
                                      view_kws={'alpha_selected': 0.2, 'alpha_3d': 0.6})
 
     points_bp = sb.PointMapper(
-        point_column='bp_locs', group_column='bp_group', set_position=True)
+        point_column='bp_locs', group_column='bp_group', set_position=bp_active)
     bp_layer = sb.AnnotationLayerConfig(
         'branch_points', mapping_rules=points_bp,
         active=True, color='#299bff', tags=bp_proofreading_tags)
@@ -76,13 +101,44 @@ def proofer_statebuilder(oid, client, bp_proofreading_tags=[], ep_proofreading_t
         'end_points', mapping_rules=points_ep,
         color='#ffffff', tags=ep_proofreading_tags)
 
+    if root_pt is not None:
+        view_kws = {'position': root_pt}
+    else:
+        view_kws = {}
+
     sb_ep = sb.StateBuilder(layers=[img, seg, ep_layer],
-                            state_server=state_server)
+                            state_server=state_server, view_kws=view_kws)
     sb_bp = sb.StateBuilder(layers=[bp_layer], view_kws={'layout': '3d'})
 
     sb_all = sb.ChainedStateBuilder([sb_ep, sb_bp])
 
     return sb_all
+
+
+def process_node_groups(skf, cp_max_thresh=200_000):
+    """ For each 
+    """
+    cps = skf.cover_paths
+    cp_lens = [skf.path_length(cp) for cp in cps]
+
+    cp_ends = np.array([cp[-1] for cp in cps])
+
+    cp_df = pd.DataFrame({'cps': cps, 'pathlen': cp_lens, 'ends': cp_ends})
+    cp_df['root_parent'] = skf.parent_nodes(cp_df['ends'])
+
+    clip = cp_df['pathlen'] > cp_max_thresh
+    cp_df[clip].query('root_parent != -1')
+    clip_points = cp_df[clip].query('root_parent != -1')['ends']
+    extra_clip_points = skf.child_nodes(skf.root)
+    all_clip_pts = np.unique(np.concatenate([clip_points, extra_clip_points]))
+    cgph = skf.cut_graph(all_clip_pts)
+
+    _, lbls = sparse.csgraph.connected_components(cgph)
+    min_dist_label = [np.min(skf.distance_to_root[lbls == l])
+                      for l in np.unique(lbls)]
+    labels_ordered = np.unique(lbls)[np.argsort(min_dist_label)]
+    new_lbls = np.argsort(labels_ordered)[lbls]
+    return new_lbls
 
 
 def build_topo_dataframes(skf, cp_percentile):
@@ -107,7 +163,6 @@ def build_topo_dataframes(skf, cp_percentile):
     min_dist_label = [np.min(skf.distance_to_root[lbls == l])
                       for l in np.unique(lbls)]
     labels_ordered = np.unique(lbls)[np.argsort(min_dist_label)]
-
     new_lbls = np.argsort(labels_ordered)[lbls]
 
     bps = skf.branch_points_undirected
@@ -135,7 +190,7 @@ def process_points_from_skeleton(oid, sk, client, cp_percentile=98,
     sb_dfs = (ep_df.sort_values(by=['ep_group', 'dfr']),
               bp_df.sort_values(by=['bp_group', 'dfr']))
     pf_sb = proofer_statebuilder(
-        oid, client, bp_proofreading_tags, ep_proofreading_tags)
+        oid, client, sk.vertices[sk.root] / np.array([4, 4, 40]), bp_proofreading_tags, ep_proofreading_tags)
     return pf_sb, sb_dfs
 
 

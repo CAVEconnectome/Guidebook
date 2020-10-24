@@ -1,0 +1,8 @@
+flask
+flask-wtf
+annotationframeworkclient
+meshparty
+pandas
+numpy
+scipy
+nglui
