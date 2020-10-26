@@ -6,3 +6,5 @@ pandas
 numpy
 scipy
 nglui
+fastremap
+cloud-volume
