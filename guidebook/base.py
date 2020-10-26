@@ -2,7 +2,10 @@ import pandas as pd
 import numpy as np
 from annotationframeworkclient import FrameworkClient
 from scipy import sparse
-from meshparty import trimesh_io, skeletonize, mesh_filters
+import fastremap
+import cloudvolume
+import requests
+from meshparty import trimesh_io, skeleton, skeletonize, mesh_filters
 from nglui import statebuilder as sb
 
 MIN_CC_SIZE = 1000
@@ -116,7 +119,7 @@ def proofer_statebuilder(oid, client, root_pt=None, bp_proofreading_tags=[], ep_
 
 
 def process_node_groups(skf, cp_max_thresh=200_000):
-    """ For each 
+    """ For each
     """
     cps = skf.cover_paths
     cp_lens = [skf.path_length(cp) for cp in cps]
@@ -218,3 +221,117 @@ def generate_proofreading_state(datastack,
         sb_dfs, return_as=return_as, url_prefix=client.info.viewer_site())
 
     return state
+
+
+######
+# Chunkedgraph skeletonization
+######
+
+def nm_to_chunk(xyz_nm, cv, voxel_resolution=[4, 4, 40], mip_scaling=[2, 2, 1]):
+    x_vox = np.atleast_2d(xyz_nm) / (np.array(mip_scaling)
+                                     * np.array(voxel_resolution))
+    offset_vox = np.array(cv.mesh.meta.meta.voxel_offset(0))
+    return (x_vox - offset_vox) / np.array(cv.mesh.meta.meta.graph_chunk_size)
+
+
+def chunk_to_nm(xyz_ch, cv, voxel_resolution=[4, 4, 40], mip_scaling=[2, 2, 1]):
+    x_vox = np.atleast_2d(xyz_ch) * cv.mesh.meta.meta.graph_chunk_size
+    return (x_vox + np.array(cv.mesh.meta.meta.voxel_offset(0))) * voxel_resolution * mip_scaling
+
+
+def get_lvl2_graph(root_id, client):
+    url = f'https://minnie.microns-daf.com/segmentation/api/v1/table/{client.chunkedgraph.table_name}/node/{root_id}/lvl2_graph'
+    r = requests.get(url, headers=client.auth.request_header)
+    eg = r.json()
+    eg_arr = np.array(eg['edge_graph'], dtype=np.int)
+    eg_arr_un = np.unique(np.sort(eg_arr, axis=1), axis=0)
+    return np.unique(np.sort(eg_arr, axis=1), axis=0)
+
+
+def build_spatial_graph(lvl2_edge_graph, cv):
+    lvl2_ids = np.unique(lvl2_edge_graph)
+    l2dict = {l2id: ii for ii, l2id in enumerate(lvl2_ids)}
+    eg_arr_rm = fastremap.remap(lvl2_edge_graph, l2dict)
+    l2dict_reversed = {ii: l2id for l2id, ii in l2dict.items()}
+
+    x_ch = [np.array(cv.mesh.meta.meta.decode_chunk_position(l))
+            for l in lvl2_ids]
+    return eg_arr_rm, l2dict_reversed, x_ch
+
+
+def skeletonize_lvl2_graph(x_ch, eg, invalidation_d=3):
+    mesh_chunk = trimesh_io.Mesh(vertices=x_ch, faces=[], link_edges=eg)
+    sk_ch = skeletonize.skeletonize_mesh(
+        mesh_chunk, invalidation_d=3, collapse_soma=False, compute_radius=False)
+    return sk_ch
+
+
+def lvl2_branch_fragment_locs(sk_ch, lvl2dict_reversed, cv):
+    br_minds = sk_ch.mesh_index[sk_ch.branch_points_undirected]
+    branch_l2s = list(map(lambda x: lvl2dict_reversed[x], br_minds))
+    l2meshes = cv.mesh.get_meshes_on_bypass(branch_l2s, allow_missing=True)
+
+    l2means = []
+    for l2id in branch_l2s:
+        try:
+            l2m = np.mean(l2meshes[l2id].vertices, axis=0)
+            l2means.append(l2m)
+        except:
+            l2means.append(np.array([np.nan, np.nan, np.nan]))
+    l2means = np.vstack(l2means)
+    return np.unique(l2means, axis=0)
+
+
+def get_lvl2_branch_points(datastack, root_id, invalidation_d=3, return_skeleton=False):
+    """Get branch points of the level 2 skeleton for a root id.
+
+    Parameters
+    ----------
+    datastack : str
+        Datastack name
+    root_id : int
+        Root id of object to skeletonize
+    invalidation_d : int, optional
+        Invalidation distance in chunk increments
+
+    Returns
+    -------
+    Branch point locations
+        Branch point locations in mesh space (nms)
+    """
+    client = FrameworkClient(datastack)
+    cv = cloudvolume.CloudVolume(
+        client.info.segmentation_source(), use_https=True, progress=False)
+
+    lvl2_eg = get_lvl2_graph(root_id, client)
+    eg_arr_rm, l2dict_reversed, x_ch = build_spatial_graph(lvl2_eg, cv)
+
+    sk_ch = skeletonize_lvl2_graph(
+        x_ch, eg_arr_rm, invalidation_d=invalidation_d)
+
+    l2br_locs = lvl2_branch_fragment_locs(sk_ch, l2dict_reversed, cv)
+    if return_skeleton:
+        return l2br_locs, sk_ch
+    else:
+        return l2br_locs
+
+
+def lvl2_statebuilder(datastack, root_id):
+    client = FrameworkClient(datastack)
+    img = sb.ImageLayerConfig(client.info.image_source(
+    ), contrast_controls=True, black=0.35, white=0.66)
+    seg = sb.SegmentationLayerConfig(
+        client.info.segmentation_source(), fixed_ids=[root_id])
+
+    anno = sb.AnnotationLayerConfig(
+        'branch_points', mapping_rules=sb.PointMapper(), array_data=True, active=True)
+    bp_statebuilder = sb.StateBuilder(
+        [img, seg, anno], url_prefix=client.info.viewer_site())
+    return bp_statebuilder
+
+
+def generate_lvl2_proofreading(datastack, root_id, invalidation_d=3):
+    l2br_locs = get_lvl2_branch_points(
+        datastack, root_id, invalidation_d=invalidation_d, return_skeleton=False)
+    bp_statebuilder = lvl2_statebuilder(datastack, root_id)
+    return bp_statebuilder.render_state(l2br_locs / np.array([4, 4, 40]), return_as='url')

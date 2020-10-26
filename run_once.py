@@ -11,7 +11,7 @@ app = create_app()
 host = '0.0.0.0'
 port = 4001
 
-url = f'http://{host}:{port}{url_prefix}/skeletonize'
+url = f'http://{host}:{port}{url_prefix}/landing'
 
 if __name__ == "__main__":
     # WSGIRequestHandler.protocol_version = "HTTP/1.1"
