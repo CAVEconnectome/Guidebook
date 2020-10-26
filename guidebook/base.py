@@ -282,7 +282,7 @@ def lvl2_branch_fragment_locs(sk_ch, lvl2dict_reversed, cv):
     return np.unique(l2means, axis=0)
 
 
-def get_lvl2_branch_points(datastack, root_id, invalidation_d=3, return_skeleton=False):
+def get_lvl2_branch_points(datastack, root_id, invalidation_d=3, return_skeleton=False, verbose=False):
     """Get branch points of the level 2 skeleton for a root id.
 
     Parameters
@@ -299,17 +299,30 @@ def get_lvl2_branch_points(datastack, root_id, invalidation_d=3, return_skeleton
     Branch point locations
         Branch point locations in mesh space (nms)
     """
+    if verbose:
+        import time
+        t0 = time.time()
     client = FrameworkClient(datastack)
     cv = cloudvolume.CloudVolume(
         client.info.segmentation_source(), use_https=True, progress=False)
 
     lvl2_eg = get_lvl2_graph(root_id, client)
+    if verbose:
+        t1 = time.time()
+        print('\nTime to return graph: ', t1-t0)
     eg_arr_rm, l2dict_reversed, x_ch = build_spatial_graph(lvl2_eg, cv)
 
     sk_ch = skeletonize_lvl2_graph(
         x_ch, eg_arr_rm, invalidation_d=invalidation_d)
+    if verbose:
+        t2 = time.time()
+        print('\nTime to generate skeleton: ', t2-t1)
 
     l2br_locs = lvl2_branch_fragment_locs(sk_ch, l2dict_reversed, cv)
+    if verbose:
+        t3 = time.time()
+        print('\nTime to find mesh locations: ', t3-t2)
+        print(f'Elapsed time: {t3-t0}')
     if return_skeleton:
         return l2br_locs, sk_ch
     else:
@@ -332,6 +345,8 @@ def lvl2_statebuilder(datastack, root_id):
 
 def generate_lvl2_proofreading(datastack, root_id, invalidation_d=3):
     l2br_locs = get_lvl2_branch_points(
-        datastack, root_id, invalidation_d=invalidation_d, return_skeleton=False)
+        datastack, root_id, invalidation_d=invalidation_d, return_skeleton=False, verbose=True)
     bp_statebuilder = lvl2_statebuilder(datastack, root_id)
-    return bp_statebuilder.render_state(l2br_locs / np.array([4, 4, 40]), return_as='url')
+    drop_rows = np.any(np.isnan(l2br_locs), axis=1)
+
+    return bp_statebuilder.render_state(l2br_locs[~drop_rows] / np.array([4, 4, 40]), return_as='url')
