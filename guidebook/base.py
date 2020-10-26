@@ -231,7 +231,7 @@ def nm_to_chunk(xyz_nm, cv, voxel_resolution=[4, 4, 40], mip_scaling=[2, 2, 1]):
     x_vox = np.atleast_2d(xyz_nm) / (np.array(mip_scaling)
                                      * np.array(voxel_resolution))
     offset_vox = np.array(cv.mesh.meta.meta.voxel_offset(0))
-    return (x_vox - offset_vox) / np.array(cv.mesh.meta.meta.graph_chunk_size)
+    return (x_vox + offset_vox) / np.array(cv.mesh.meta.meta.graph_chunk_size)
 
 
 def chunk_to_nm(xyz_ch, cv, voxel_resolution=[4, 4, 40], mip_scaling=[2, 2, 1]):
