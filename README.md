@@ -19,7 +19,7 @@ conda activate guidebook_test
 3. Clone the `guidebook` to your computer. In your terminal, find a good working directory and enter:
 
 ```:bash
-git clone git@github.com/ceesem/guidebook.git
+git clone https://github.com/ceesem/guidebook.git
 ```
 
 4. Go into the new guidebook directory and install it with pip. The develop flag means that it will use the code in the directory every time it is imported, so new changes can be incorporated with a simple `git pull`.
