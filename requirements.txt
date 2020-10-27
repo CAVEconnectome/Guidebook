@@ -1,10 +1,10 @@
 flask
 flask-wtf
 annotationframeworkclient
-meshparty
 pandas
 numpy
 scipy
 nglui
-fastremap
 cloud-volume
+meshparty@ git+https://github.com/sdorkenw/MeshParty.git@meshwork_merge#egg=meshparty
+fastremap
