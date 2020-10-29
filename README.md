@@ -4,7 +4,7 @@ Tools to guide attention proofreading neurons.
 
 ## Super early testing instructions
 
-1. Make a new conda environment. 
+1. Make a new conda environment from a terminal window.
 
 ```:bash
 conda create --name guidebook_test python==3.7
@@ -16,7 +16,7 @@ conda create --name guidebook_test python==3.7
 conda activate guidebook_test
 ```
 
-3. Clone the `guidebook` to your computer. In your terminal, find a good working directory and enter:
+3. Clone the `guidebook` to your computer. In your terminal, find a good working directory (e.g. `~/Work`) and enter:
 
 ```:bash
 git clone https://github.com/ceesem/guidebook.git
