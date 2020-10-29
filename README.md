@@ -29,6 +29,8 @@ cd guidebook
 pip install . develop
 ```
 
+**NOTE**: If you have not set up your computer for programmatic access to the annotation framework, get your computer set up by following the instructions at the [AnnotationFrameworkClient documentation](https://annotationframeworkclient.readthedocs.io/en/latest/guide/authentication.html)
+
 5. Start the server by running:  
 
 ```:bash
