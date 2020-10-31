@@ -6,5 +6,5 @@ numpy
 scipy
 nglui
 cloud-volume
-meshparty@ git+https://github.com/sdorkenw/MeshParty.git@meshwork_merge#egg=meshparty
+-e git+https://github.com/sdorkenw/MeshParty.git@meshwork_merge#egg=meshparty
 fastremap

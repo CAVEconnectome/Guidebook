@@ -4,7 +4,6 @@ import os
 
 with open('requirements.txt', 'r') as f:
     required = f.read().splitlines()
-    print(required)
 
 dependency_links = []
 del_ls = []

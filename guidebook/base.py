@@ -28,7 +28,7 @@ def process_mesh(oid, client, mm, min_component_size=1000):
     return meshf
 
 
-def process_skeleton(mesh, root_loc=None, root_is_soma=False, close_mean=10000, sk_kwargs={}):
+def process_skeleton_from_mesh(mesh, root_loc=None, root_is_soma=False, close_mean=10000, sk_kwargs={}):
     if root_is_soma:
         soma_loc = root_loc
     else:
@@ -65,22 +65,50 @@ def base_sb_data(client, oid, focus_loc=None, fixed_ids=[], black=0.35, white=0.
                               black=black, white=white)
     seg = sb.SegmentationLayerConfig(client.info.segmentation_source(),
                                      fixed_ids=[oid],
-                                     view_kws={'alpha_selected': 0.2, 'alpha_3d': 0.6})
+                                     view_kws={'alpha_selected': 0.2,
+                                               'alpha_3d': 0.6})
     view_kws = {'layout': '3d'}
     view_kws['position'] = focus_loc
-    sb_ep = sb.StateBuilder(layers=[img, seg],
-                            state_server=state_server, view_kws=view_kws)
+    sb_base = sb.StateBuilder(layers=[img, seg],
+                              state_server=state_server,
+                              view_kws=view_kws)
     return sb_base, None
 
 
-def branch_sb_data(client, oid, skf, tags=[], active=False, color='#299bff'):
+def branch_sb_data(client, oid, skf, labels, tags=[], active=False, color='#299bff'):
     points_bp = sb.PointMapper(
-        point_column='bp_locs', group_column='bp_group', set_position=bp_active)
+        point_column='bp_locs', group_column='bp_group', set_position=active)
     bp_layer = sb.AnnotationLayerConfig(
         'branch_points', mapping_rules=points_bp, active=active, color=color, tags=tags)
     sb_bp = sb.StateBuilder(layers=[bp_layer])
 
-    return sb_bp, df
+    bps = skf.branch_points_undirected
+    bp_lbls = labels[bps]
+
+    bp_df = pd.DataFrame({'bps': bps,
+                          'bp_locs': (skf.vertices[bps] / np.array([4, 4, 40])).tolist(),
+                          'dfr': skf.distance_to_root[bps],
+                          'bp_group': bp_lbls})
+
+    return sb_bp, bp_df
+
+
+def end_point_sb_data(client, oid, skf, labels, tags=[], active=False, color='#299bff'):
+    points = sb.PointMapper(
+        point_column='ep_locs', group_column='ep_group', set_position=active)
+    ep_layer = sb.AnnotationLayerConfig(
+        'branch_points', mapping_rules=points, active=active, color=color, tags=tags)
+    sb_ep = sb.StateBuilder(layers=[ep_layer])
+
+    eps = skf.end_points_undirected
+    ep_lbls = labels[eps]
+
+    ep_df = pd.DataFrame({'eps': eps,
+                          'ep_locs': (skf.vertices[eps] / np.array([4, 4, 40])).tolist(),
+                          'dfr': skf.distance_to_root[eps],
+                          'ep_group': ep_lbls})
+
+    return sb_ep, ep_df
 
 
 def proofer_statebuilder(oid, client, root_pt=None, bp_proofreading_tags=[], ep_proofreading_tags=[], bp_active=False):
@@ -119,8 +147,6 @@ def proofer_statebuilder(oid, client, root_pt=None, bp_proofreading_tags=[], ep_
 
 
 def process_node_groups(skf, cp_max_thresh=200_000):
-    """ For each
-    """
     cps = skf.cover_paths
     cp_lens = [skf.path_length(cp) for cp in cps]
 
@@ -213,8 +239,8 @@ def generate_proofreading_state(datastack,
         cache_size=0, cv_path=client.info.segmentation_source())
     mesh = process_mesh(root_id, client, mm,
                         min_component_size=min_mesh_component_size)
-    skf = process_skeleton(mesh, root_loc=root_loc,
-                           root_is_soma=root_is_soma, sk_kwargs=SK_KWARGS)
+    skf = process_skeleton_from_mesh(mesh, root_loc=root_loc,
+                                     root_is_soma=root_is_soma, sk_kwargs=SK_KWARGS)
     pf_sb, sb_dfs = process_points_from_skeleton(root_id, skf, client)
 
     state = pf_sb.render_state(
@@ -244,7 +270,6 @@ def get_lvl2_graph(root_id, client):
     r = requests.get(url, headers=client.auth.request_header)
     eg = r.json()
     eg_arr = np.array(eg['edge_graph'], dtype=np.int)
-    eg_arr_un = np.unique(np.sort(eg_arr, axis=1), axis=0)
     return np.unique(np.sort(eg_arr, axis=1), axis=0)
 
 
@@ -262,7 +287,9 @@ def build_spatial_graph(lvl2_edge_graph, cv):
 def skeletonize_lvl2_graph(x_ch, eg, invalidation_d=3):
     mesh_chunk = trimesh_io.Mesh(vertices=x_ch, faces=[], link_edges=eg)
     sk_ch = skeletonize.skeletonize_mesh(
-        mesh_chunk, invalidation_d=3, collapse_soma=False, compute_radius=False)
+        mesh_chunk, invalidation_d=invalidation_d,
+        collapse_soma=False, compute_radius=False,
+        remove_zero_length_edges=False)
     return sk_ch
 
 
@@ -275,7 +302,8 @@ def lvl2_branch_fragment_locs(sk_ch, lvl2dict_reversed, cv):
     for l2id in branch_l2s:
         try:
             l2m = np.mean(l2meshes[l2id].vertices, axis=0)
-            l2means.append(l2m)
+            _, ii = spatial.cKDTree(l2meshes[l2id].vertices).query(l2m)
+            l2means.append(l2meshes[l2id].vertices[ii])
         except:
             l2means.append(np.array([np.nan, np.nan, np.nan]))
     l2means = np.vstack(l2means)
@@ -343,9 +371,63 @@ def lvl2_statebuilder(datastack, root_id):
     return bp_statebuilder
 
 
+def get_closest_lvl2_chunk(point, root_id, client, cv=None, resolution=[4, 4, 40], mip_rescale=[2, 2, 1], radius=200):
+    """Get the closest level 2 chunk on a root id 
+
+    Parameters
+    ----------
+    point : array-like
+        Point in space.
+    root_id : int
+        Root id of the object
+    client : FrameworkClient
+        Framework client to access data
+    cv : cloudvolume.CloudVolume, optional
+        Predefined cloudvolume, generated if None. By default None
+    resolution : list, optional
+        Point resolution to map between point resolution and mesh resolution, by default [4, 4, 40]
+    mip_rescale : resolution difference between 
+    """
+    if cv is None:
+        cv = cloudvolume.CloudVolume(
+            client.info.segmentation_source(), use_https=True)
+
+    # Get the closest adjacent point for the root id within the radius.
+    pt = np.array(point) // mip_rescale
+    offset = radius // (np.array(mip_rescale) * np.array(resolution))
+    lx = np.array(pt) - offset
+    ux = np.array(pt) + offset
+    bbox = cloudvolume.Bbox(lx, ux)
+    vol = cv.download(bbox,
+                      segids=[root_id])
+    vol = np.squeeze(vol)
+    if not bool(np.any(vol > 0)):
+        raise ValueError('No point of the root id is near the specified point')
+
+    ctr = offset * point * resolution
+    xyz = np.vstack(np.where(vol > 0)).T
+    xyz_nm = xyz * mip_rescale * resolution
+
+    ind = np.argmin(np.linalg.norm(xyz_nm-ctr, axis=1))
+    closest_pt = vol.bounds.minpt + xyz[ind]
+
+    # Look up the level 2 supervoxel for that id.
+    closest_sv = int(cv.download_point(closest_pt, size=1))
+    lvl2_id = client.chunkedgraph.get_root_id(closest_sv, level2=True)
+
+    return lvl2_id
+
+
+def update_lvl2_skeleton(l2_sk, l2br_locs):
+    verts = l2_sk.vertices
+    verts[l2_sk.branch_points_undirected] = l2br_locs
+    return skeleton.Skeleton(vertices=verts, edges=l2_sk.edges, remove_zero_length_edges=False)
+
+
 def generate_lvl2_proofreading(datastack, root_id, invalidation_d=3):
-    l2br_locs = get_lvl2_branch_points(
-        datastack, root_id, invalidation_d=invalidation_d, return_skeleton=False, verbose=True)
+    l2br_locs, l2_sk = get_lvl2_branch_points(
+        datastack, root_id, invalidation_d=invalidation_d, return_skeleton=True, verbose=True)
+    sk_pf = update_lvl2_skeleton(l2_sk, l2br_locs)
     bp_statebuilder = lvl2_statebuilder(datastack, root_id)
     drop_rows = np.any(np.isnan(l2br_locs), axis=1)
 
