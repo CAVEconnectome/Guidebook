@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from annotationframeworkclient import FrameworkClient
-from scipy import sparse
+from scipy import sparse, spatial
 import fastremap
 import cloudvolume
 import requests
@@ -17,6 +17,12 @@ SK_KWARGS = dict(invalidation_d=8000,
 
 EP_PROOFREADING_TAGS = []
 BP_PROOFREADING_TAGS = ['checked', 'error']
+
+
+def chunk_dims(cv):
+    """Get the size of a single chunk"""
+    dims = chunk_to_nm([1, 1, 1], cv)-chunk_to_nm([0, 0, 0], cv)
+    return np.squeeze(dims)
 
 
 def process_mesh(oid, client, mm, min_component_size=1000):
@@ -75,14 +81,16 @@ def base_sb_data(client, oid, focus_loc=None, fixed_ids=[], black=0.35, white=0.
     return sb_base, None
 
 
-def branch_sb_data(client, oid, skf, labels, tags=[], active=False, color='#299bff'):
+def branch_sb_data(client, oid, skf, labels=None, tags=[], set_position=False, active=False, color='#299bff'):
     points_bp = sb.PointMapper(
-        point_column='bp_locs', group_column='bp_group', set_position=active)
+        point_column='bp_locs', group_column='bp_group', set_position=set_position)
     bp_layer = sb.AnnotationLayerConfig(
         'branch_points', mapping_rules=points_bp, active=active, color=color, tags=tags)
     sb_bp = sb.StateBuilder(layers=[bp_layer])
 
     bps = skf.branch_points_undirected
+    if labels is None:
+        labels = np.ones(len(skf.vertices))
     bp_lbls = labels[bps]
 
     bp_df = pd.DataFrame({'bps': bps,
@@ -90,7 +98,7 @@ def branch_sb_data(client, oid, skf, labels, tags=[], active=False, color='#299b
                           'dfr': skf.distance_to_root[bps],
                           'bp_group': bp_lbls})
 
-    return sb_bp, bp_df
+    return sb_bp, bp_df.sort_values(by=['bp_group', 'dfr'])
 
 
 def end_point_sb_data(client, oid, skf, labels, tags=[], active=False, color='#299bff'):
@@ -108,7 +116,7 @@ def end_point_sb_data(client, oid, skf, labels, tags=[], active=False, color='#2
                           'dfr': skf.distance_to_root[eps],
                           'ep_group': ep_lbls})
 
-    return sb_ep, ep_df
+    return sb_ep, ep_df.sort_values(by=['ep_group', 'dfr'])
 
 
 def proofer_statebuilder(oid, client, root_pt=None, bp_proofreading_tags=[], ep_proofreading_tags=[], bp_active=False):
@@ -281,11 +289,10 @@ def build_spatial_graph(lvl2_edge_graph, cv):
 
     x_ch = [np.array(cv.mesh.meta.meta.decode_chunk_position(l))
             for l in lvl2_ids]
-    return eg_arr_rm, l2dict_reversed, x_ch
+    return eg_arr_rm, l2dict, l2dict_reversed, x_ch
 
 
-def skeletonize_lvl2_graph(x_ch, eg, invalidation_d=3):
-    mesh_chunk = trimesh_io.Mesh(vertices=x_ch, faces=[], link_edges=eg)
+def skeletonize_lvl2_graph(mesh_chunk, root_pt=None, cv=None, client=None, voxel_resolution=None, mip_scaling=None, invalidation_d=3, point_radius=200):
     sk_ch = skeletonize.skeletonize_mesh(
         mesh_chunk, invalidation_d=invalidation_d,
         collapse_soma=False, compute_radius=False,
@@ -299,18 +306,21 @@ def lvl2_branch_fragment_locs(sk_ch, lvl2dict_reversed, cv):
     l2meshes = cv.mesh.get_meshes_on_bypass(branch_l2s, allow_missing=True)
 
     l2means = []
+    missing_ids = []
     for l2id in branch_l2s:
         try:
             l2m = np.mean(l2meshes[l2id].vertices, axis=0)
             _, ii = spatial.cKDTree(l2meshes[l2id].vertices).query(l2m)
             l2means.append(l2meshes[l2id].vertices[ii])
         except:
+            missing_ids.append(l2id)
             l2means.append(np.array([np.nan, np.nan, np.nan]))
     l2means = np.vstack(l2means)
-    return np.unique(l2means, axis=0)
+    return l2means, missing_ids
 
 
-def get_lvl2_branch_points(datastack, root_id, invalidation_d=3, return_skeleton=False, verbose=False):
+def get_lvl2_skeleton(client, root_id, convert_to_nm=False, refine_branch_points=False,
+                      root_point=None, point_radius=200, invalidation_d=3, verbose=False, auto_remesh=False):
     """Get branch points of the level 2 skeleton for a root id.
 
     Parameters
@@ -330,7 +340,7 @@ def get_lvl2_branch_points(datastack, root_id, invalidation_d=3, return_skeleton
     if verbose:
         import time
         t0 = time.time()
-    client = FrameworkClient(datastack)
+
     cv = cloudvolume.CloudVolume(
         client.info.segmentation_source(), use_https=True, progress=False)
 
@@ -338,23 +348,36 @@ def get_lvl2_branch_points(datastack, root_id, invalidation_d=3, return_skeleton
     if verbose:
         t1 = time.time()
         print('\nTime to return graph: ', t1-t0)
-    eg_arr_rm, l2dict_reversed, x_ch = build_spatial_graph(lvl2_eg, cv)
 
-    sk_ch = skeletonize_lvl2_graph(
-        x_ch, eg_arr_rm, invalidation_d=invalidation_d)
-    if verbose:
-        t2 = time.time()
-        print('\nTime to generate skeleton: ', t2-t1)
+    eg, l2dict, l2dict_reversed, x_ch = build_spatial_graph(lvl2_eg, cv)
 
-    l2br_locs = lvl2_branch_fragment_locs(sk_ch, l2dict_reversed, cv)
-    if verbose:
-        t3 = time.time()
-        print('\nTime to find mesh locations: ', t3-t2)
-        print(f'Elapsed time: {t3-t0}')
-    if return_skeleton:
-        return l2br_locs, sk_ch
+    mesh_chunk = trimesh_io.Mesh(vertices=x_ch, faces=[], link_edges=eg)
+
+    if root_point is not None:
+        lvl2_root_chid, lvl2_root_loc = get_closest_lvl2_chunk(
+            root_point, root_id, client=client, cv=cv, radius=point_radius, return_point=True)
+        root_mesh_index = l2dict[lvl2_root_chid]
     else:
-        return l2br_locs
+        root_mesh_index = None
+        lvl2_root_loc = None
+
+    sk_ch = skeletonize.skeletonize_mesh(
+        mesh_chunk, invalidation_d=invalidation_d,
+        collapse_soma=False, compute_radius=False,
+        root_index=root_mesh_index, remove_zero_length_edges=False)
+
+    if refine_branch_points:
+        sk_ch, missing_ids = refine_skeleton(sk_ch, l2dict_reversed,
+                                             cv, convert_to_nm, root_location=lvl2_root_loc)
+        if len(missing_ids) > 0:
+            if auto_remesh:
+                client.chunkedgraph.remesh_level2_chunks(missing_ids)
+                raise ValueError(
+                    f'Regenerating mesh for level 2 ids: {missing_ids}. Try again in a few minutes.')
+            else:
+                raise ValueError(
+                    f'No mesh found for level 2 ids: {missing_ids}')
+    return sk_ch, l2dict_reversed
 
 
 def lvl2_statebuilder(datastack, root_id):
@@ -371,7 +394,7 @@ def lvl2_statebuilder(datastack, root_id):
     return bp_statebuilder
 
 
-def get_closest_lvl2_chunk(point, root_id, client, cv=None, resolution=[4, 4, 40], mip_rescale=[2, 2, 1], radius=200):
+def get_closest_lvl2_chunk(point, root_id, client, cv=None, resolution=[4, 4, 40], mip_rescale=[2, 2, 1], radius=200, return_point=False):
     """Get the closest level 2 chunk on a root id 
 
     Parameters
@@ -415,7 +438,10 @@ def get_closest_lvl2_chunk(point, root_id, client, cv=None, resolution=[4, 4, 40
     closest_sv = int(cv.download_point(closest_pt, size=1))
     lvl2_id = client.chunkedgraph.get_root_id(closest_sv, level2=True)
 
-    return lvl2_id
+    if return_point:
+        return lvl2_id, closest_pt * mip_rescale * resolution
+    else:
+        return lvl2_id
 
 
 def update_lvl2_skeleton(l2_sk, l2br_locs):
@@ -424,11 +450,73 @@ def update_lvl2_skeleton(l2_sk, l2br_locs):
     return skeleton.Skeleton(vertices=verts, edges=l2_sk.edges, remove_zero_length_edges=False)
 
 
-def generate_lvl2_proofreading(datastack, root_id, invalidation_d=3):
-    l2br_locs, l2_sk = get_lvl2_branch_points(
-        datastack, root_id, invalidation_d=invalidation_d, return_skeleton=True, verbose=True)
-    sk_pf = update_lvl2_skeleton(l2_sk, l2br_locs)
-    bp_statebuilder = lvl2_statebuilder(datastack, root_id)
-    drop_rows = np.any(np.isnan(l2br_locs), axis=1)
+def refine_skeleton(l2_sk, l2dict_reversed, cv, convert_to_nm=True, root_location=None):
+    verts = l2_sk.vertices
 
-    return bp_statebuilder.render_state(l2br_locs[~drop_rows] / np.array([4, 4, 40]), return_as='url')
+    l2br_locs, missing_ids = lvl2_branch_fragment_locs(
+        l2_sk, l2dict_reversed, cv)
+    # if np.any(np.isnan(l2br_locs)):
+    #     bad_l2_inds = np.any(np.isnan(l2br_locs), axis=1)
+    #     bad_minds = l2_sk.mesh_index[l2_sk.branch_points_undirected[bad_l2_inds]]
+    #     bad_l2_ids = [l2dict_reversed[mind] for mind in bad_minds]
+    #     raise ValueError(f'No mesh found for lvl2 ids: {bad_l2_ids}')
+
+    missing_brinds = np.any(np.isnan(l2br_locs), axis=1)
+    verts[l2_sk.branch_points_undirected[~missing_brinds]
+          ] = l2br_locs[~missing_brinds]
+
+    if convert_to_nm:
+        other_inds = np.full(len(verts), True)
+        other_inds[l2_sk.branch_points_undirected[~missing_brinds]] = False
+        verts[other_inds] = chunk_to_nm(
+            verts[other_inds], cv) + chunk_dims(cv) // 2   # Move to center of chunks
+
+    if root_location is not None:
+        verts[l2_sk.root] = root_location
+
+    return skeleton.Skeleton(vertices=verts, edges=l2_sk.edges, root=l2_sk.root, remove_zero_length_edges=False), missing_ids
+
+
+# def generate_lvl2_proofreading(datastack, root_id, invalidation_d=3):
+#     l2br_locs, l2_sk = get_lvl2_branch_points(
+#         datastack, root_id, invalidation_d=invalidation_d, return_skeleton=True, verbose=True)
+#     sk_pf = update_lvl2_skeleton(l2_sk, l2br_locs)
+#     bp_statebuilder = lvl2_statebuilder(datastack, root_id)
+#     drop_rows = np.any(np.isnan(l2br_locs), axis=1)
+
+#     return bp_statebuilder.render_state(l2br_locs[~drop_rows] / np.array([4, 4, 40]), return_as='url')
+
+
+def root_sb_data(sk, set_position=False, active=False, layer_name='root', voxel_resolution=[4, 4, 40]):
+    pt = sb.PointMapper(point_column='pt', set_position=set_position)
+    root_layer = sb.AnnotationLayerConfig(
+        layer_name, color='#bfae00', mapping_rules=[pt], active=active)
+    root_sb = sb.StateBuilder([root_layer])
+    root_df = pd.DataFrame({'pt': (np.atleast_2d(sk.vertices[sk.root]) / np.array(voxel_resolution)).tolist(),
+                            })
+    return root_sb, root_df
+
+
+def generate_lvl2_proofreading(datastack, root_id, root_point=None, point_radius=200, invalidation_d=3, auto_remesh=True):
+    client = FrameworkClient(datastack)
+    l2_sk, l2dict_reversed = get_lvl2_skeleton(client, root_id, root_point=root_point, refine_branch_points=True, convert_to_nm=True,
+                                               point_radius=point_radius, invalidation_d=invalidation_d, verbose=False, auto_remesh=auto_remesh)
+    sbs = []
+    dfs = []
+
+    base_sb, base_df = base_sb_data(
+        client, root_id, focus_loc=root_point, fixed_ids=[root_id])
+    sbs.append(base_sb)
+    dfs.append(base_df)
+
+    rt_sb, rt_df = root_sb_data(l2_sk, set_position=True)
+    sbs.append(rt_sb)
+    dfs.append(rt_df)
+
+    lbls = process_node_groups(l2_sk, cp_max_thresh=200_000)
+    bp_sb, bp_df = branch_sb_data(
+        client, root_id, l2_sk, labels=lbls, tags=BP_PROOFREADING_TAGS, set_position=False, active=True)
+    sbs.append(bp_sb)
+    dfs.append(bp_df)
+    sb_pf = sb.ChainedStateBuilder(sbs)
+    return sb_pf.render_state(dfs, return_as='url', url_prefix=client.info.viewer_site())

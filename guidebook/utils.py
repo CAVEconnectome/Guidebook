@@ -1,6 +1,6 @@
 import numpy as np
 from trimesh import creation
-from .base import chunk_to_nm
+from .base import chunk_to_nm, chunk_dims
 from functools import reduce
 
 
@@ -15,12 +15,6 @@ def chunk_box(xyz, chunk_size=[1, 1, 1]):
     """Create a trimesh box for a single chunk"""
     xyz_offset = xyz + np.array(chunk_size) / 2
     return creation.box(chunk_size, _tmat(xyz_offset))
-
-
-def chunk_dims(cv):
-    """Get the size of a single chunk"""
-    dims = chunk_to_nm([1, 1, 1], cv)-chunk_to_nm([0, 0, 0], cv)
-    return np.squeeze(dims)
 
 
 def chunk_mesh(xyz_ch, cv):
