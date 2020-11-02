@@ -26,7 +26,7 @@ git clone https://github.com/ceesem/guidebook.git
 
 ```:bash
 cd guidebook
-pip install . develop
+pip install -e .
 ```
 
 **NOTE**: If you have not set up your computer for programmatic access to the annotation framework, get your computer set up by following the instructions at the [AnnotationFrameworkClient documentation](https://annotationframeworkclient.readthedocs.io/en/latest/guide/authentication.html)
