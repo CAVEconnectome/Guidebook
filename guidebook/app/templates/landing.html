@@ -3,12 +3,15 @@
 {% block content %}
     <div>
         <h1>Neuron Guidebook:</h1>
-        <p>
-            <a href="{{ url_for('guidebook.skeletonize_form') }}">Skeletonize</a>
-        </p>
+        
         <p>
             <a href="{{ url_for('guidebook.lvl2_form') }}">Fast Skeletonize</a>
         </p>
+
+        <p>
+            <a href="{{ url_for('guidebook.skeletonize_form') }}">Precise Skeletonize (very slow)</a>
+        </p>
+
         <p>
             <a href="{{ url_for('guidebook.shutdown') }}">Shut down</a>
         </p>

@@ -12,6 +12,5 @@ class SkeletonizeForm(FlaskForm):
 
 class Lvl2SkeletonizeForm(FlaskForm):
     root_id = StringField('Root ID', validators=[DataRequired()])
-    # root_location = StringField('Root location')
-    # root_is_soma = BooleanField('Soma')
+    root_location = StringField('Root location')
     submit = SubmitField('Generate Neuroglancer Link')

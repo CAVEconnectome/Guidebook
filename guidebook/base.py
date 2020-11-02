@@ -7,6 +7,7 @@ import cloudvolume
 import requests
 from meshparty import trimesh_io, skeleton, skeletonize, mesh_filters
 from nglui import statebuilder as sb
+import time
 
 MIN_CC_SIZE = 1000
 SK_KWARGS = dict(invalidation_d=8000,
@@ -86,7 +87,7 @@ def branch_sb_data(client, oid, skf, labels=None, tags=[], set_position=False, a
         point_column='bp_locs', group_column='bp_group', set_position=set_position)
     bp_layer = sb.AnnotationLayerConfig(
         'branch_points', mapping_rules=points_bp, active=active, color=color, tags=tags)
-    sb_bp = sb.StateBuilder(layers=[bp_layer])
+    sb_bp = sb.StateBuilder(layers=[bp_layer], view_kws={'layout': '3d'})
 
     bps = skf.branch_points_undirected
     if labels is None:
@@ -342,7 +343,7 @@ def get_lvl2_skeleton(client, root_id, convert_to_nm=False, refine_branch_points
         t0 = time.time()
 
     cv = cloudvolume.CloudVolume(
-        client.info.segmentation_source(), use_https=True, progress=False)
+        client.info.segmentation_source(), use_https=True, progress=False, bounded=False)
 
     lvl2_eg = get_lvl2_graph(root_id, client)
     if verbose:
@@ -354,21 +355,33 @@ def get_lvl2_skeleton(client, root_id, convert_to_nm=False, refine_branch_points
     mesh_chunk = trimesh_io.Mesh(vertices=x_ch, faces=[], link_edges=eg)
 
     if root_point is not None:
+        if verbose:
+            t2 = time.time()
         lvl2_root_chid, lvl2_root_loc = get_closest_lvl2_chunk(
             root_point, root_id, client=client, cv=cv, radius=point_radius, return_point=True)
         root_mesh_index = l2dict[lvl2_root_chid]
+        if verbose:
+            print('\n Time to get root index: ', time.time()-t2)
     else:
         root_mesh_index = None
         lvl2_root_loc = None
 
+    if verbose:
+        t3 = time.time()
     sk_ch = skeletonize.skeletonize_mesh(
         mesh_chunk, invalidation_d=invalidation_d,
         collapse_soma=False, compute_radius=False,
         root_index=root_mesh_index, remove_zero_length_edges=False)
+    if verbose:
+        print('\n Time to skeletonize: ', time.time()-t3)
 
     if refine_branch_points:
+        if verbose:
+            t4 = time.time()
         sk_ch, missing_ids = refine_skeleton(sk_ch, l2dict_reversed,
                                              cv, convert_to_nm, root_location=lvl2_root_loc)
+        if verbose:
+            print('\n Time to refine branch points, ', time.time()-t4)
         if len(missing_ids) > 0:
             if auto_remesh:
                 client.chunkedgraph.remesh_level2_chunks(missing_ids)
@@ -377,6 +390,7 @@ def get_lvl2_skeleton(client, root_id, convert_to_nm=False, refine_branch_points
             else:
                 raise ValueError(
                     f'No mesh found for level 2 ids: {missing_ids}')
+
     return sk_ch, l2dict_reversed
 
 
@@ -413,7 +427,7 @@ def get_closest_lvl2_chunk(point, root_id, client, cv=None, resolution=[4, 4, 40
     """
     if cv is None:
         cv = cloudvolume.CloudVolume(
-            client.info.segmentation_source(), use_https=True)
+            client.info.segmentation_source(), use_https=True, bounded=False)
 
     # Get the closest adjacent point for the root id within the radius.
     pt = np.array(point) // mip_rescale
@@ -497,10 +511,12 @@ def root_sb_data(sk, set_position=False, active=False, layer_name='root', voxel_
     return root_sb, root_df
 
 
-def generate_lvl2_proofreading(datastack, root_id, root_point=None, point_radius=200, invalidation_d=3, auto_remesh=True):
+def generate_lvl2_proofreading(datastack, root_id, root_point=None, point_radius=200, invalidation_d=3, auto_remesh=True, verbose=True):
+    if verbose:
+        t0 = time.time()
     client = FrameworkClient(datastack)
     l2_sk, l2dict_reversed = get_lvl2_skeleton(client, root_id, root_point=root_point, refine_branch_points=True, convert_to_nm=True,
-                                               point_radius=point_radius, invalidation_d=invalidation_d, verbose=False, auto_remesh=auto_remesh)
+                                               point_radius=point_radius, invalidation_d=invalidation_d, verbose=verbose, auto_remesh=auto_remesh)
     sbs = []
     dfs = []
 
@@ -519,4 +535,6 @@ def generate_lvl2_proofreading(datastack, root_id, root_point=None, point_radius
     sbs.append(bp_sb)
     dfs.append(bp_df)
     sb_pf = sb.ChainedStateBuilder(sbs)
+    if verbose:
+        print('\nComplete time: ', time.time()-t0)
     return sb_pf.render_state(dfs, return_as='url', url_prefix=client.info.viewer_site())

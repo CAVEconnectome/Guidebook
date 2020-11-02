@@ -27,9 +27,7 @@ def skeletonize_form():
     if form.validate_on_submit():
         datastack = DEFAULT_DATASTACK
         root_id = form.root_id.data
-        root_loc_data = np.fromstring(
-            form.root_location.data, count=3, dtype=np.int, sep=',')
-        root_loc_formatted = '_'.join(map(str, root_loc_data))
+        root_loc_formatted = encode_root_location(form.root_location.data)
         values = {'root_is_soma': form.root_is_soma.data,
                   'root_loc': root_loc_formatted}
         url = url_for('.generate_guidebook',
@@ -43,14 +41,27 @@ def skeletonize_form():
                            form=form)
 
 
+def encode_root_location(form_data):
+    root_loc_data = np.fromstring(
+        form_data, count=3, dtype=np.int, sep=',')
+    root_loc_formatted = '_'.join(map(str, root_loc_data))
+    return root_loc_formatted
+
+
+def parse_root_location(root_loc, field_name='root_loc'):
+    if root_loc is not None:
+        root_loc = np.array(root_loc.split('_')).astype(
+            int)
+        print(f'Root location is: {root_loc}')
+    return root_loc
+
+
 @bp.route("/datastack/<datastack>/root_id/<int:root_id>/skeletonize", methods=["GET", "POST"])
 def generate_guidebook(datastack, root_id,):
     root_is_soma = request.args.get('root_is_soma', False)
-    root_loc = request.args.get('root_loc', None)
+    root_loc = parse_root_location(request.args.get('root_location', None))
     if root_loc is not None:
-        root_loc = np.array(root_loc.split('_')).astype(
-            int) * np.array([4, 4, 40])
-        print(f'Root location is: {root_loc}')
+        root_loc = root_loc * [4, 4, 40]
     state = generate_proofreading_state(
         datastack, int(root_id), root_is_soma=root_is_soma, root_loc=root_loc,  return_as='url')
     return redirect(state, code=302)
@@ -66,7 +77,10 @@ def shutdown():
 
 @bp.route("/datastack/<datastack>/root_id/<int:root_id>/coarse_branch")
 def generate_guidebook_chunkgraph(datastack, root_id):
-    state = generate_lvl2_proofreading(datastack, int(root_id))
+    root_loc = parse_root_location(request.args.get('root_location', None))
+    print(root_loc)
+    state = generate_lvl2_proofreading(
+        datastack, int(root_id), root_point=root_loc)
     return redirect(state, code=302)
 
 
@@ -76,8 +90,9 @@ def lvl2_form():
     if form.validate_on_submit():
         datastack = DEFAULT_DATASTACK
         root_id = form.root_id.data
+        root_loc_formatted = encode_root_location(form.root_location.data)
         url = url_for('.generate_guidebook_chunkgraph',
-                      datastack=datastack, root_id=root_id)
+                      datastack=datastack, root_id=root_id, root_location=root_loc_formatted)
         flash(f'Generating coarse proofreading link for {root_id}')
         return redirect(url)
 
