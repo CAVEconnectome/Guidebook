@@ -1,8 +1,9 @@
-<html>
-    <head>
-      <title>{{ title }}</title>
-    </head>
-    <body>
-        {% block content %}{% endblock %}
-    </body>
-</html>
+<!doctype html>
+<title>{% block title %}{% endblock %} - Guidebook - v.{{version}}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<section class="content">
+  <header>
+    {% block header %}{% endblock %}
+  </header>
+  {% block content %}{% endblock %}
+</section>

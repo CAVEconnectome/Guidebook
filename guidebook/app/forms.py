@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, BooleanField
-from wtforms.validators import DataRequired
+from wtforms.validators import DataRequired, Optional
 
 
 class SkeletonizeForm(FlaskForm):
@@ -12,5 +12,6 @@ class SkeletonizeForm(FlaskForm):
 
 class Lvl2SkeletonizeForm(FlaskForm):
     root_id = StringField('Root ID', validators=[DataRequired()])
-    root_location = StringField('Root location')
+    root_location = StringField(
+        'Root location (optional)', default="", validators=[Optional()])
     submit = SubmitField('Generate Neuroglancer Link')

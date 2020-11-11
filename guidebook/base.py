@@ -384,9 +384,12 @@ def get_lvl2_skeleton(client, root_id, convert_to_nm=False, refine_branch_points
             print('\n Time to refine branch points, ', time.time()-t4)
         if len(missing_ids) > 0:
             if auto_remesh:
-                client.chunkedgraph.remesh_level2_chunks(missing_ids)
+                # remesh missing and one-hop neighbors
+                remesh_ids = np.unique(
+                    eg[np.any(np.isin(eg, missing_ids), axis=1)])
+                client.chunkedgraph.remesh_level2_chunks(remesh_ids)
                 raise ValueError(
-                    f'Regenerating mesh for level 2 ids: {missing_ids}. Try again in a few minutes.')
+                    f'Regenerating mesh for level 2 ids and their neighbors: {missing_ids}. Try again in a few minutes.')
             else:
                 raise ValueError(
                     f'No mesh found for level 2 ids: {missing_ids}')
@@ -511,12 +514,14 @@ def root_sb_data(sk, set_position=False, active=False, layer_name='root', voxel_
     return root_sb, root_df
 
 
-def generate_lvl2_proofreading(datastack, root_id, root_point=None, point_radius=200, invalidation_d=3, auto_remesh=True, verbose=True):
+def generate_lvl2_proofreading(datastack, root_id, root_point=None, point_radius=200, invalidation_d=3, auto_remesh=True, return_as='url', verbose=True):
     if verbose:
         t0 = time.time()
     client = FrameworkClient(datastack)
+
     l2_sk, l2dict_reversed = get_lvl2_skeleton(client, root_id, root_point=root_point, refine_branch_points=True, convert_to_nm=True,
                                                point_radius=point_radius, invalidation_d=invalidation_d, verbose=verbose, auto_remesh=auto_remesh)
+
     sbs = []
     dfs = []
 
@@ -537,4 +542,4 @@ def generate_lvl2_proofreading(datastack, root_id, root_point=None, point_radius
     sb_pf = sb.ChainedStateBuilder(sbs)
     if verbose:
         print('\nComplete time: ', time.time()-t0)
-    return sb_pf.render_state(dfs, return_as='url', url_prefix=client.info.viewer_site())
+    return sb_pf.render_state(dfs, return_as=return_as, url_prefix=client.info.viewer_site())

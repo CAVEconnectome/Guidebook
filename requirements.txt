@@ -8,3 +8,4 @@ nglui
 cloud-volume
 -e git+https://github.com/sdorkenw/MeshParty.git@meshwork_merge#egg=meshparty
 fastremap
+middle-auth-client
