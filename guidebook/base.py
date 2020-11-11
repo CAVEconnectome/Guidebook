@@ -387,6 +387,7 @@ def get_lvl2_skeleton(client, root_id, convert_to_nm=False, refine_branch_points
                 # remesh missing and one-hop neighbors
                 remesh_ids = np.unique(
                     eg[np.any(np.isin(eg, missing_ids), axis=1)])
+                print(remesh_ids)
                 client.chunkedgraph.remesh_level2_chunks(remesh_ids)
                 raise ValueError(
                     f'Regenerating mesh for level 2 ids and their neighbors: {missing_ids}. Try again in a few minutes.')
