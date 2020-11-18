@@ -11,4 +11,5 @@ def create_app():
     # app.config.from_object(BaseConfig)
     app = configure_app(app)
     app.register_blueprint(processing.bp)
+
     return app

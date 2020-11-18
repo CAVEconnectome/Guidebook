@@ -1,10 +1,13 @@
-from flask import Blueprint, redirect, request, flash, render_template, url_for, current_app
+from flask import Blueprint, redirect, request, flash, render_template, url_for, current_app, jsonify
 from ..base import generate_proofreading_state, generate_lvl2_proofreading
 from .forms import SkeletonizeForm, Lvl2SkeletonizeForm
 import numpy as np
 from middle_auth_client import auth_requires_permission, auth_required
 import re
 from annotationframeworkclient import FrameworkClient
+from rq import Queue, Retry
+from rq.job import Job
+from .worker import conn
 
 api_version = 0
 url_prefix = f"/guidebook"
@@ -13,6 +16,8 @@ bp = Blueprint("guidebook", __name__, url_prefix=url_prefix)
 
 __version__ = "0.0.1"
 DEFAULT_DATASTACK = 'minnie65_phase3_v1'
+
+q = Queue(connection=conn)
 
 
 @bp.route("/")
@@ -26,24 +31,24 @@ def landing_page():
     return render_template('landing.html', title='Neuron Guidebook')
 
 
-@auth_requires_permission("view")
-@bp.route("skeletonize", methods=['GET', 'POST'])
-def skeletonize_form():
-    form = SkeletonizeForm()
-    if form.validate_on_submit():
-        datastack = current_app.config.get('DATASTACK', DEFAULT_DATASTACK)
-        root_id = form.root_id.data
-        root_loc_formatted = encode_root_location(form.root_location.data)
-        values = {'root_is_soma': form.root_is_soma.data,
-                  'root_loc': root_loc_formatted}
-        url = url_for('.generate_guidebook',
-                      datastack=datastack, root_id=root_id, **values)
+# @auth_requires_permission("view")
+# @bp.route("skeletonize", methods=['GET', 'POST'])
+# def skeletonize_form():
+#     form = SkeletonizeForm()
+#     if form.validate_on_submit():
+#         datastack = current_app.config.get('DATASTACK', DEFAULT_DATASTACK)
+#         root_id = form.root_id.data
+#         root_loc_formatted = encode_root_location(form.root_location.data)
+#         values = {'root_is_soma': form.root_is_soma.data,
+#                   'root_loc': root_loc_formatted}
+#         url = url_for('.generate_guidebook',
+#                       datastack=datastack, root_id=root_id, **values)
 
-        return redirect(url)
+#         return redirect(url)
 
-    return render_template('skeletonize.html',
-                           title='Neuron Guidebook',
-                           form=form)
+#     return render_template('skeletonize.html',
+#                            title='Neuron Guidebook',
+#                            form=form)
 
 
 def encode_root_location(form_data):
@@ -67,29 +72,37 @@ def parse_root_location(root_loc, field_name='root_loc'):
     return root_loc
 
 
-@auth_requires_permission("view")
-@bp.route(f"{api_prefix}/datastack/<datastack>/root_id/<int:root_id>/skeletonize", methods=["GET", "POST"])
-def generate_guidebook(datastack, root_id,):
-    root_is_soma = request.args.get('root_is_soma', False)
-    root_loc = parse_root_location(request.args.get('root_location', None))
-    if root_loc is not None:
-        root_loc = root_loc * [4, 4, 40]
-    state = generate_proofreading_state(
-        datastack, int(root_id), root_is_soma=root_is_soma, root_loc=root_loc,  return_as='url')
-    return redirect(state, code=302)
+# @auth_requires_permission("view")
+# @bp.route(f"{api_prefix}/datastack/<datastack>/root_id/<int:root_id>/skeletonize", methods=["GET", "POST"])
+# def generate_guidebook(datastack, root_id,):
+#     root_is_soma = request.args.get('root_is_soma', False)
+#     root_loc = parse_root_location(request.args.get('root_location', None))
+#     if root_loc is not None:
+#         root_loc = root_loc * [4, 4, 40]
+#     state = generate_proofreading_state(
+#         datastack, int(root_id), root_is_soma=root_is_soma, root_loc=root_loc,  return_as='url')
+#     return redirect(state, code=302)
 
 
 @auth_requires_permission("view")
 @bp.route(f"{api_prefix}/datastack/<datastack>/root_id/<int:root_id>/coarse_branch")
 def generate_guidebook_chunkgraph(datastack, root_id):
     root_loc = parse_root_location(request.args.get('root_location', None))
-    try:
-        state = generate_lvl2_proofreading(
-            datastack, int(root_id), return_as='url', root_point=root_loc)
-        # short_url = upload_state(state)
-        return redirect(state, 302)
-    except Exception as e:
-        return error_page(e)
+    job = q.enqueue_call(generate_lvl2_proofreading, args=(datastack, int(root_id)),
+                         kwargs={'return_as': 'url', 'root_point': root_loc},
+                         result_ttl=5000, timeout=600, retry=Retry(max=2, interval=30))
+    return redirect(url_for('.show_skeletonization_result', job_key=job.get_id()))
+
+
+@bp.route('/skeletonization/results/<job_key>')
+def show_skeletonization_result(job_key):
+    job = Job.fetch(job_key, connection=conn)
+    if job.is_finished:
+        return render_template('show_link.html', ngl_url=job.result)
+    elif job.get_status() == "failed":
+        return error_page(job.exc_info)
+    else:
+        return "Not done yet, refresh in a few seconds."
 
 
 def upload_state(state):

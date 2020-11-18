@@ -321,7 +321,8 @@ def lvl2_branch_fragment_locs(sk_ch, lvl2dict_reversed, cv):
 
 
 def get_lvl2_skeleton(client, root_id, convert_to_nm=False, refine_branch_points=False,
-                      root_point=None, point_radius=200, invalidation_d=3, verbose=False, auto_remesh=False):
+                      root_point=None, point_radius=200, invalidation_d=3, verbose=False,
+                      auto_remesh=False, allow_missing_chunks=True):
     """Get branch points of the level 2 skeleton for a root id.
 
     Parameters
@@ -387,13 +388,14 @@ def get_lvl2_skeleton(client, root_id, convert_to_nm=False, refine_branch_points
                 # remesh missing and one-hop neighbors
                 remesh_ids = np.unique(
                     eg[np.any(np.isin(eg, missing_ids), axis=1)])
-                print(remesh_ids)
                 client.chunkedgraph.remesh_level2_chunks(remesh_ids)
-                raise ValueError(
-                    f'Regenerating mesh for level 2 ids and their neighbors: {missing_ids}. Try again in a few minutes.')
+                if not allow_missing_chunks:
+                    raise ValueError(
+                        f'Regenerating mesh for level 2 ids and their neighbors: {missing_ids}. Try again in a few minutes.')
             else:
-                raise ValueError(
-                    f'No mesh found for level 2 ids: {missing_ids}')
+                if not allow_missing_chunks:
+                    raise ValueError(
+                        f'No mesh found for level 2 ids: {missing_ids}')
 
     return sk_ch, l2dict_reversed
 
