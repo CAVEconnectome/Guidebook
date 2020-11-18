@@ -1,0 +1,28 @@
+version: '3'
+services:
+  app:
+    image: 'guidebook:tag'
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 8081:4001
+    volumes:
+      - ~/.cloudvolume:/home/nginx/.cloudvolume
+    env_file:
+      - ./.env.dev
+    command: python run.py
+  worker:
+    image: 'guidebook:tag'
+    build:
+        context: .
+        dockerfile: Dockerfile
+    volumes:
+        - ~/.cloudvolume:/home/nginx/.cloudvolume
+    env_file:
+        - ./.env.dev
+    command: python worker.py
+  redis:
+    image: redis:latest
+    ports:
+      - 6379:6379
