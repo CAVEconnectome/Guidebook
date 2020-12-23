@@ -322,7 +322,7 @@ def lvl2_branch_fragment_locs(sk_ch, lvl2dict_reversed, cv):
 
 def get_lvl2_skeleton(client, root_id, convert_to_nm=False, refine_branch_points=False,
                       root_point=None, point_radius=200, invalidation_d=3, verbose=False,
-                      auto_remesh=False, allow_missing_chunks=True):
+                      auto_remesh=False, allow_missing_chunks=True, cv=None):
     """Get branch points of the level 2 skeleton for a root id.
 
     Parameters
@@ -343,8 +343,9 @@ def get_lvl2_skeleton(client, root_id, convert_to_nm=False, refine_branch_points
         import time
         t0 = time.time()
 
-    cv = cloudvolume.CloudVolume(
-        client.info.segmentation_source(), use_https=True, progress=False, bounded=False)
+    if cv is None:
+        cv = cloudvolume.CloudVolume(
+            client.info.segmentation_source(), use_https=True, progress=False, bounded=False)
 
     lvl2_eg = get_lvl2_graph(root_id, client)
     if verbose:
@@ -433,7 +434,7 @@ def get_closest_lvl2_chunk(point, root_id, client, cv=None, resolution=[4, 4, 40
     """
     if cv is None:
         cv = cloudvolume.CloudVolume(
-            client.info.segmentation_source(), use_https=True, bounded=False)
+            client.info.segmentation_source(), use_https=True, bounded=False, progress=False)
 
     # Get the closest adjacent point for the root id within the radius.
     pt = np.array(point) // mip_rescale
