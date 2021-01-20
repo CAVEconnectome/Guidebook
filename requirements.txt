@@ -5,8 +5,8 @@ pandas
 numpy
 scipy
 nglui
+meshparty
 cloud-volume
-git+https://github.com/sdorkenw/MeshParty.git@meshwork_merge#egg=meshparty
 fastremap
 middle-auth-client
 redis

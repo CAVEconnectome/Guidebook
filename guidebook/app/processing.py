@@ -31,26 +31,6 @@ def landing_page():
     return render_template('landing.html', title='Neuron Guidebook')
 
 
-# @auth_requires_permission("view")
-# @bp.route("skeletonize", methods=['GET', 'POST'])
-# def skeletonize_form():
-#     form = SkeletonizeForm()
-#     if form.validate_on_submit():
-#         datastack = current_app.config.get('DATASTACK', DEFAULT_DATASTACK)
-#         root_id = form.root_id.data
-#         root_loc_formatted = encode_root_location(form.root_location.data)
-#         values = {'root_is_soma': form.root_is_soma.data,
-#                   'root_loc': root_loc_formatted}
-#         url = url_for('.generate_guidebook',
-#                       datastack=datastack, root_id=root_id, **values)
-
-#         return redirect(url)
-
-#     return render_template('skeletonize.html',
-#                            title='Neuron Guidebook',
-#                            form=form)
-
-
 def encode_root_location(form_data):
     if len(form_data) == 0:
         return None
@@ -88,8 +68,16 @@ def parse_root_location(root_loc, field_name='root_loc'):
 @bp.route(f"{api_prefix}/datastack/<datastack>/root_id/<int:root_id>/coarse_branch")
 def generate_guidebook_chunkgraph(datastack, root_id):
     root_loc = parse_root_location(request.args.get('root_location', None))
+    branch_points = request.args.get('branch_points', 'True') == 'True'
+    end_points = request.args.get('end_points', 'True') == 'True'
+    kwargs = {
+        'return_as': 'url',
+        'root_point': root_loc,
+        'refine_branch_points': branch_points,
+        'refine_end_points': end_points,
+    }
     job = q.enqueue_call(generate_lvl2_proofreading, args=(datastack, int(root_id)),
-                         kwargs={'return_as': 'url', 'root_point': root_loc},
+                         kwargs=kwargs,
                          result_ttl=5000, timeout=600, retry=Retry(max=2, interval=30))
     return redirect(url_for('.show_skeletonization_result', job_key=job.get_id()))
 
@@ -122,12 +110,22 @@ def lvl2_form():
     if form.validate_on_submit():
         datastack = DEFAULT_DATASTACK
         root_id = form.root_id.data
+        point_option = form.point_option.data
+        if point_option == 'both':
+            branch_points = True
+            end_points = True
+        elif point_option == 'ep':
+            branch_points = False
+            end_points = True
+        elif point_option == 'bp':
+            branch_points = True
+            end_points = False
         try:
             root_loc_formatted = encode_root_location(form.root_location.data)
         except Exception as e:
             return error_page(e)
         url = url_for('.generate_guidebook_chunkgraph',
-                      datastack=datastack, root_id=root_id, root_location=root_loc_formatted)
+                      datastack=datastack, root_id=root_id, root_location=root_loc_formatted, branch_points=branch_points, end_points=end_points)
         return redirect(url)
 
     return render_template('lvl2_skeletonize.html',
