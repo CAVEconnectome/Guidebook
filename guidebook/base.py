@@ -399,7 +399,10 @@ def lvl2_fragment_locs(l2_ids, cv):
         except:
             missing_ids.append(l2id)
             l2means.append(np.array([np.nan, np.nan, np.nan]))
-    l2means = np.vstack(l2means)
+    if len(l2means) > 0:
+        l2means = np.vstack(l2means)
+    else:
+        l2means = np.empty((0, 3), dtype=float)
     return l2means, missing_ids
 
 
