@@ -1,6 +1,13 @@
 <!doctype html>
-<title>{% block title %}{% endblock %} - Guidebook - v.{{version}}</title>
+<title>{% block title %}{% endblock %} - NeuronGuidebook - v.{{version}}</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<nav>
+  <ul><li>
+     <a href="{{url_for('guidebook.landing_page')}}">Guidebook- v.{{version}}</a>
+  </li>
+
+  </ul>
+</nav>
 <section class="content">
   <header>
     {% block header %}{% endblock %}

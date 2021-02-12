@@ -6,6 +6,7 @@ numpy
 scipy
 nglui
 meshparty
+pcg_skel
 cloud-volume
 fastremap
 middle-auth-client
