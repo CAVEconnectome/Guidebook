@@ -21,15 +21,17 @@ q = Queue(connection=conn)
 
 @bp.route("/version")
 def version_text():
-    return f"Neuron Guidebook v. {__version__}"
+    return f"Neuron Guidebook v.{__version__}"
 
 
 @bp.route("/")
 # @auth_required
 def landing_page():
     return render_template('landing.html',
-                           title='Neuron Guidebook',
-                           version=__version__)
+                           title=f'Neuron Guidebook',
+                           datastack=current_app.config.get("DATASTACK"),
+                           version=__version__,
+                           )
 
 
 def encode_root_location(form_data):
@@ -45,7 +47,7 @@ def encode_root_location(form_data):
             "Root location must be specified with 3 comma-separated numbers")
 
 
-def parse_root_location(root_loc, field_name='root_loc'):
+def parse_root_location(root_loc):
     if root_loc is not None:
         root_loc = np.array(root_loc.split('_')).astype(
             int)
@@ -53,18 +55,21 @@ def parse_root_location(root_loc, field_name='root_loc'):
     return root_loc
 
 
-@bp.route(f"{api_prefix}/datastack/<datastack>/root_id/<int:root_id>/coarse_branch")
+@bp.route(f"{api_prefix}/datastack/<datastack>/root_id/<int:root_id>/l2skeleton")
 # @auth_required
 def generate_guidebook_chunkgraph(datastack, root_id):
     root_loc = parse_root_location(request.args.get('root_location', None))
     branch_points = request.args.get('branch_points', 'True') == 'True'
     end_points = request.args.get('end_points', 'True') == 'True'
+    collapse_soma = request.args.get('collapse_soma') == 'True'
     kwargs = {
         'return_as': 'url',
         'root_point': root_loc,
         'refine_branch_points': branch_points,
         'refine_end_points': end_points,
+        'collapse_soma': collapse_soma,
     }
+    print(kwargs)
     job = q.enqueue_call(generate_lvl2_proofreading, args=(datastack, int(root_id)),
                          kwargs=kwargs,
                          result_ttl=5000, timeout=600, retry=Retry(max=2, interval=10))
@@ -116,8 +121,14 @@ def lvl2_form():
             root_loc_formatted = encode_root_location(form.root_location.data)
         except Exception as e:
             return error_page(e)
+        root_is_soma = form.root_is_soma.data
         url = url_for('.generate_guidebook_chunkgraph',
-                      datastack=datastack, root_id=root_id, root_location=root_loc_formatted, branch_points=branch_points, end_points=end_points)
+                      datastack=datastack,
+                      root_id=root_id,
+                      root_location=root_loc_formatted,
+                      branch_points=branch_points,
+                      end_points=end_points,
+                      collapse_soma=root_is_soma)
         return redirect(url)
 
     return render_template('lvl2_skeletonize.html',

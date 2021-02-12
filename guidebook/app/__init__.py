@@ -10,5 +10,4 @@ def create_app():
                 static_folder='../static')
     app = configure_app(app)
     app.register_blueprint(processing.bp)
-    print(f'App is running datastack: {app.config.get("DATASTACK")}')
     return app
