@@ -68,11 +68,15 @@ def generate_guidebook_chunkgraph(datastack, root_id):
         'refine_branch_points': branch_points,
         'refine_end_points': end_points,
         'collapse_soma': collapse_soma,
+        'n_parallel': int(current_app.config.get('N_PARALLEL')),
     }
     print(kwargs)
-    job = q.enqueue_call(generate_lvl2_proofreading, args=(datastack, int(root_id)),
+    job = q.enqueue_call(generate_lvl2_proofreading,
+                         args=(datastack, int(root_id)),
                          kwargs=kwargs,
-                         result_ttl=5000, timeout=600, retry=Retry(max=2, interval=10))
+                         result_ttl=5000,
+                         timeout=600,
+                         retry=Retry(max=2, interval=10))
     return redirect(url_for('.show_skeletonization_result', job_key=job.get_id()))
 
 

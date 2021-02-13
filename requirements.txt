@@ -5,7 +5,7 @@ pandas
 numpy
 scipy
 nglui
-meshparty
+meshparty>=1.10.2
 pcg_skel
 cloud-volume
 fastremap

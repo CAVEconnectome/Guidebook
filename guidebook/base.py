@@ -160,6 +160,8 @@ def generate_lvl2_proofreading(
     collapse_soma=True,
     return_as="url",
     verbose=True,
+    segmentation_fallback=True,
+    n_parallel=1,
 ):
     if verbose:
         t0 = time.time()
@@ -182,6 +184,8 @@ def generate_lvl2_proofreading(
                                   nan_rounds=None,
                                   invalidation_d=invalidation_d,
                                   root_point_search_radius=point_radius,
+                                  segmentation_fallback=segmentation_fallback,
+                                  n_parallel=n_parallel,
                                   )
 
     sbs = []

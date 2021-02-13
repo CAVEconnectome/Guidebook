@@ -5,6 +5,7 @@ import json
 class BaseConfig(object):
     SECRET_KEY = os.environ.get('GUIDEBOOK_CSRF_KEY', 'test_key_1293473')
     DATASTACK = os.environ.get('GUIDEBOOK_DATASTACK')
+    N_PARALLEL = os.environ.get('GUIDEBOOK_N_PARALLEL', 1)
 
     if os.environ.get("DAF_CREDENTIALS", None) is not None:
         with open(os.environ.get("DAF_CREDENTIALS"), "r") as f:
