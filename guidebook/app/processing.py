@@ -62,6 +62,8 @@ def generate_guidebook_chunkgraph(datastack, root_id):
     branch_points = request.args.get('branch_points', 'True') == 'True'
     end_points = request.args.get('end_points', 'True') == 'True'
     collapse_soma = request.args.get('collapse_soma') == 'True'
+    segmentation_fallback = request.args.get(
+        'segmentation_fallback', False) == 'True'
     kwargs = {
         'return_as': 'url',
         'root_point': root_loc,
@@ -69,6 +71,7 @@ def generate_guidebook_chunkgraph(datastack, root_id):
         'refine_end_points': end_points,
         'collapse_soma': collapse_soma,
         'n_parallel': int(current_app.config.get('N_PARALLEL')),
+        'segmentation_fallback': segmentation_fallback,
     }
     print(kwargs)
     job = q.enqueue_call(generate_lvl2_proofreading,
@@ -85,7 +88,7 @@ def generate_guidebook_chunkgraph(datastack, root_id):
 def show_skeletonization_result(job_key):
     job = Job.fetch(job_key, connection=conn)
     if job.is_finished:
-        return render_template('show_link.html', ngl_url=job.result)
+        return render_template('show_link.html', ngl_url=job.result, version=__version__)
     elif job.get_status() == "failed":
         return error_page(job.exc_info)
     else:
@@ -112,6 +115,7 @@ def lvl2_form():
         datastack = current_app.config.get('DATASTACK')
         root_id = form.root_id.data
         point_option = form.point_option.data
+        segmentation_fallback = form.segmentation_fallback.data
         if point_option == 'both':
             branch_points = True
             end_points = True
@@ -132,7 +136,8 @@ def lvl2_form():
                       root_location=root_loc_formatted,
                       branch_points=branch_points,
                       end_points=end_points,
-                      collapse_soma=root_is_soma)
+                      collapse_soma=root_is_soma,
+                      segmentation_fallback=segmentation_fallback)
         return redirect(url)
 
     return render_template('lvl2_skeletonize.html',

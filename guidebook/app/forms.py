@@ -12,4 +12,6 @@ class Lvl2SkeletonizeForm(FlaskForm):
         'Points', choices=[('both', 'Branch and End Points'),
                            ('bp', 'Branch Points'),
                            ('ep', 'End Points')], )
+    segmentation_fallback = BooleanField('Use segmentation as fallback (slower but more accurate)',
+                                         default=False)
     submit = SubmitField('Generate Neuroglancer Link')
