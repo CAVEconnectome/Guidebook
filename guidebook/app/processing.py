@@ -143,4 +143,5 @@ def lvl2_form():
     return render_template('lvl2_skeletonize.html',
                            title='Neuron Guidebook',
                            form=form,
-                           version=__version__)
+                           version=__version__,
+                           allow_segmentation=current_app.config.get('ALLOW_SEGMENTATION', False))

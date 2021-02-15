@@ -14,10 +14,12 @@
             {{ form.root_is_soma }}
             {{ form.root_is_soma.label }}
         </p>
+        {%- if allow_segmentation -%}
         <p>
             {{ form.segmentation_fallback }}
             {{ form.segmentation_fallback.label }}
         </p>
+        {% endif %}
         <p>
             {{ form.point_option }} <br>
         </p>
