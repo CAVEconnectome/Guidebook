@@ -1,40 +1,27 @@
 # Guidebook
 
-Tools to guide attention proofreading neurons.
+Tools to guide attention for proofreading neurons in a pychunkedgraph-backed segmentation.
 
-## Super early testing instructions
+## How to use
 
-1. Make a new conda environment from a terminal window.
+From the user's perspective, Guidebook takes a neuron and finds lists of points to look at.
+At the moment, these are strictly topological points of interests: branch points and/or end points.
+Because this structure is generated entirely from the current state of the segmentation, this can be completely dynamic and be run immediately after a proofreading event.
 
-```:bash
-conda create --name guidebook_test python==3.7
-```
+After submitting a neuron and waiting a short while (20-60 seconds, depending on size), you get back a collection of branch points, end points, or both.
+An optional root point helps anchor the representation at a useful point, either the soma or perhaps the base of an axon.
+The "root is soma" tag accounts for the fact that the soma is more like a large sphere than a linear neuronal process.
+Branch points are grouped into collections of branches and ordered by distance from the root point.
 
-2. Activate the new environment.
+### How it works
 
-```:bash
-conda activate guidebook_test
-```
+Guidebook has three parts:
+    1) A Flask app that asks a user for a neuron root id
+    2) A worker process that uses RQ to get jobs to do the neuron lookups
+    3) A redis server to pass messages.
 
-3. Clone the `guidebook` to your computer. In your terminal, find a good working directory (e.g. `~/Work`) and enter:
+The docker-compose.yml file is configured to build a working application in docker.
+You should be able to run `docker-compose up --build -d` from the base directory and get a working at at the `/guidebook/` endpoint.
+For testing locally, you probably need to disable the `@authrequired` decorators on `guidebook/app/processing`.
 
-```:bash
-git clone https://github.com/ceesem/guidebook.git
-```
-
-4. Go into the new guidebook directory and install it with pip. The develop flag means that it will use the code in the directory every time it is imported, so new changes can be incorporated with a simple `git pull`.
-
-```:bash
-cd guidebook
-pip install -e .
-```
-
-**NOTE**: If you have not set up your computer for programmatic access to the annotation framework, get your computer set up by following the instructions at the [AnnotationFrameworkClient documentation](https://annotationframeworkclient.readthedocs.io/en/latest/guide/authentication.html)
-
-5. Start the server by running:  
-
-```:bash
-python run_once.py
-```
-
-After several seconds, a new chrome window will open. There are three links. “Shutdown” will shutdown the flask server, which you can also do by going to the terminal and hitting control-C. “Skeletonize” is slow and involves downloading the full mesh. It might be okay for small cells, however., and currently has more features relating to root nodes, but that is not a fundamental constraint. “Fast Skeletonize” is the chunked-graph first approach and will be the fastest option for most cases. Click that link and enter a root id then hit skeletonize. You should a new tab open and after several seconds (maybe up to a minute) you’ll see a new neuroglancer link with the branch points for that neuron as an annotation layer.
+For comments or questions, contact Casey Schneider-Mizell (caseys@alleninstitute.org) 
