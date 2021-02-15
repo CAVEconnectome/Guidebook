@@ -5,7 +5,8 @@ pandas
 numpy
 scipy
 nglui
-meshparty
+meshparty>=1.10.2
+pcg_skel>=0.0.3
 cloud-volume
 fastremap
 middle-auth-client
