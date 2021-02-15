@@ -4,7 +4,6 @@ from .forms import Lvl2SkeletonizeForm
 import numpy as np
 from middle_auth_client import auth_required
 import re
-# from annotationframeworkclient import FrameworkClient
 from rq import Queue, Retry
 from rq.job import Job
 from .worker import conn
@@ -25,7 +24,7 @@ def version_text():
 
 
 @bp.route("/")
-# @auth_required
+@auth_required
 def landing_page():
     return render_template('landing.html',
                            title=f'Neuron Guidebook',
@@ -56,7 +55,7 @@ def parse_root_location(root_loc):
 
 
 @bp.route(f"{api_prefix}/datastack/<datastack>/root_id/<int:root_id>/l2skeleton")
-# @auth_required
+@auth_required
 def generate_guidebook_chunkgraph(datastack, root_id):
     root_loc = parse_root_location(request.args.get('root_location', None))
     branch_points = request.args.get('branch_points', 'True') == 'True'
@@ -83,7 +82,7 @@ def generate_guidebook_chunkgraph(datastack, root_id):
     return redirect(url_for('.show_skeletonization_result', job_key=job.get_id()))
 
 
-@bp.route('/skeletonization/results/<job_key>')
+@bp.route('/skeletonize/results/<job_key>')
 # @auth_required
 def show_skeletonization_result(job_key):
     job = Job.fetch(job_key, connection=conn)
@@ -108,7 +107,7 @@ def wait_page(reload_time):
 
 
 @bp.route("skeletonize", methods=['GET', 'POST'])
-# @auth_required
+@auth_required
 def lvl2_form():
     form = Lvl2SkeletonizeForm()
     if form.validate_on_submit():
