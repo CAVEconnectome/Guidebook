@@ -19,7 +19,7 @@ for i_l in del_ls[::-1]:
 
 setuptools.setup(
     name="guidebook",
-    version="0.0.1",
+    version="0.0.8",
     author="Casey Schneider-mizell",
     author_email="caseys@alleninstitute.org",
     description="First stab at endpoint for proofreading",
