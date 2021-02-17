@@ -20,7 +20,7 @@ services:
       - ~/.cloudvolume:/root/.cloudvolume
     env_file:
       - ./.env.dev
-    command: python guidebook/app/worker.py
+    command: python guidebook/worker.py
   redis:
     image: redis:latest
     ports:

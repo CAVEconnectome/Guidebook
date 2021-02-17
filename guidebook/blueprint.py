@@ -1,5 +1,5 @@
 from flask import Blueprint, redirect, request, render_template, url_for, current_app
-from ..base import generate_lvl2_proofreading
+from .base import generate_lvl2_proofreading
 from .forms import Lvl2SkeletonizeForm
 import numpy as np
 from middle_auth_client import auth_required
@@ -83,7 +83,7 @@ def generate_guidebook_chunkgraph(datastack, root_id):
 
 
 @bp.route('/skeletonize/results/<job_key>')
-# @auth_required
+@auth_required
 def show_skeletonization_result(job_key):
     job = Job.fetch(job_key, connection=conn)
     if job.is_finished:

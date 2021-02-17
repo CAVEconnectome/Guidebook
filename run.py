@@ -1,5 +1,5 @@
 from werkzeug.serving import WSGIRequestHandler
-from guidebook.app import create_app
+from guidebook import create_app
 import os
 
 HOME = os.path.expanduser("~")
