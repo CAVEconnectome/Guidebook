@@ -1,5 +1,6 @@
 flask
 flask-wtf
+flask_cors
 annotationframeworkclient
 pandas
 numpy
@@ -9,6 +10,6 @@ meshparty>=1.10.2
 pcg_skel>=0.0.3
 cloud-volume
 fastremap
-middle-auth-client
+middle-auth-client==3.1.1
 redis
 rq
