@@ -71,6 +71,7 @@ def generate_guidebook_chunkgraph(datastack, root_id):
         'collapse_soma': collapse_soma,
         'n_parallel': int(current_app.config.get('N_PARALLEL')),
         'segmentation_fallback': segmentation_fallback,
+        'invalidation_d': int(current_app.config.get('INVALIDATION_D')),
     }
     print(kwargs)
     job = q.enqueue_call(generate_lvl2_proofreading,
