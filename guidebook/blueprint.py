@@ -13,7 +13,7 @@ url_prefix = f"/guidebook"
 api_prefix = f"/api/v{api_version}"
 
 bp = Blueprint("guidebook", __name__, url_prefix=url_prefix)
-__version__ = "0.0.10"
+__version__ = "0.0.11"
 
 q = Queue(connection=conn)
 
