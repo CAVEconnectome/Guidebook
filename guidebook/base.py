@@ -151,6 +151,7 @@ def root_sb_data(
 def generate_lvl2_proofreading(
     datastack,
     root_id,
+    server_address,
     root_point=None,
     root_point_resolution=[4, 4, 40],
     refine_branch_points=True,
@@ -165,7 +166,7 @@ def generate_lvl2_proofreading(
 ):
     if verbose:
         t0 = time.time()
-    client = FrameworkClient(datastack)
+    client = FrameworkClient(datastack, server_address=server_address)
 
     if refine_end_points and refine_branch_points:
         refine = 'bpep'

@@ -75,7 +75,7 @@ def generate_guidebook_chunkgraph(datastack, root_id):
     }
     print(kwargs)
     job = q.enqueue_call(generate_lvl2_proofreading,
-                         args=(datastack, int(root_id)),
+                         args=(datastack, int(root_id), current_app.config.get('GLOBAL_SERVER_ADDRESS')),
                          kwargs=kwargs,
                          result_ttl=5000,
                          timeout=600,
