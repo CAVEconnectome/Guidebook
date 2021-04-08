@@ -70,6 +70,7 @@ def generate_guidebook_chunkgraph(datastack, root_id):
         'refine_end_points': end_points,
         'collapse_soma': collapse_soma,
         'n_parallel': int(current_app.config.get('N_PARALLEL')),
+        'root_point_resolution': current_app.config.get('GUIDEBOOK_EXPECTED_RESOLUTION',[4,4,40]),
         'segmentation_fallback': segmentation_fallback,
         'invalidation_d': int(current_app.config.get('INVALIDATION_D')),
     }
