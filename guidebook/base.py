@@ -1,5 +1,5 @@
 import time
-
+import os
 import numpy as np
 import pandas as pd
 import pcg_skel
@@ -18,17 +18,33 @@ SK_KWARGS = dict(
 
 CONTRAST_LOOKUP = {
     "minnie65_phase3_v1": {"black": 0.35, "white": 0.7},
+    "v1dd": {"black": 0.35, "white": 0.7},
 }
 
 EP_PROOFREADING_TAGS = ["checked", "error", "correct"]
 BP_PROOFREADING_TAGS = ["checked", "error"]
 
+GUIDEBOOK_EXPECTED_RESOLUTION = os.environ.get(
+    "GUIDEBOOK_EXPECTED_RESOLUTION", "4,4,40"
+)
+GUIDEBOOK_EXPECTED_RESOLUTION = np.array(
+    [r for r in map(int, GUIDEBOOK_EXPECTED_RESOLUTION.split(","))]
+)
 
-def base_sb_data(client, oid, focus_loc=None, black=None, white=None, view_kws={}):
+
+def base_sb_data(
+    client,
+    oid,
+    focus_loc=None,
+    black=None,
+    white=None,
+    voxel_resolution=GUIDEBOOK_EXPECTED_RESOLUTION,
+    view_kws={},
+):
     if black is None:
         black = CONTRAST_LOOKUP.get(client.datastack_name, dict()).get("black", 0)
     if white is None:
-        white = CONTRAST_LOOKUP.get(client.datastack_name, dict()).get("white", 0)
+        white = CONTRAST_LOOKUP.get(client.datastack_name, dict()).get("white", 1)
 
     state_server = client.state.state_service_endpoint
     img = sb.ImageLayerConfig(
@@ -42,7 +58,10 @@ def base_sb_data(client, oid, focus_loc=None, black=None, white=None, view_kws={
     view_kws = {"layout": "3d"}
     view_kws["position"] = focus_loc
     sb_base = sb.StateBuilder(
-        layers=[img, seg], state_server=state_server, view_kws=view_kws
+        layers=[img, seg],
+        state_server=state_server,
+        view_kws=view_kws,
+        resolution=voxel_resolution,
     )
     return sb_base, None
 
@@ -54,7 +73,7 @@ def branch_sb_data(
     set_position=False,
     active=False,
     color="#299bff",
-    voxel_resolution=[4, 4, 40],
+    voxel_resolution=GUIDEBOOK_EXPECTED_RESOLUTION,
 ):
     points_bp = sb.PointMapper(
         point_column="bp_locs", group_column="bp_group", set_position=set_position
@@ -62,7 +81,11 @@ def branch_sb_data(
     bp_layer = sb.AnnotationLayerConfig(
         "branch_points", mapping_rules=points_bp, active=active, color=color, tags=tags
     )
-    sb_bp = sb.StateBuilder(layers=[bp_layer], view_kws={"layout": "3d"})
+    sb_bp = sb.StateBuilder(
+        layers=[bp_layer],
+        view_kws={"layout": "3d"},
+        resolution=voxel_resolution,
+    )
 
     bps = skf.branch_points_undirected
     if labels is None:
@@ -86,6 +109,7 @@ def selection_point_sb_data(
     direction,
     active=False,
     color="#FF2200",
+    voxel_resolution=GUIDEBOOK_EXPECTED_RESOLUTION,
 ):
     points = sb.PointMapper(point_column="pt_locs", set_position=active)
     sp_layer = sb.AnnotationLayerConfig(
@@ -94,7 +118,7 @@ def selection_point_sb_data(
         active=active,
         color=color,
     )
-    sb_sp = sb.StateBuilder(layers=[sp_layer])
+    sb_sp = sb.StateBuilder(layers=[sp_layer], resolution=voxel_resolution)
     pts = np.atleast_2d(selection_point)
     sp_df = pd.DataFrame(
         {
@@ -110,14 +134,14 @@ def end_point_sb_data(
     tags=[],
     active=False,
     color="#FFFFFF",
-    voxel_resolution=[4, 4, 40],
+    voxel_resolution=GUIDEBOOK_EXPECTED_RESOLUTION,
     omit_indices=[],
 ):
     points = sb.PointMapper(point_column="ep_locs", set_position=active)
     ep_layer = sb.AnnotationLayerConfig(
         "end_points", mapping_rules=points, active=active, color=color, tags=tags
     )
-    sb_ep = sb.StateBuilder(layers=[ep_layer])
+    sb_ep = sb.StateBuilder(layers=[ep_layer], resolution=voxel_resolution)
 
     eps = skf.end_points_undirected
     eps = eps[~np.isin(eps, omit_indices)]
@@ -159,13 +183,17 @@ def process_node_groups(skf, cp_max_thresh=200_000):
 
 
 def root_sb_data(
-    sk, set_position=False, active=False, layer_name="root", voxel_resolution=[4, 4, 40]
+    sk,
+    set_position=False,
+    active=False,
+    layer_name="root",
+    voxel_resolution=GUIDEBOOK_EXPECTED_RESOLUTION,
 ):
     pt = sb.PointMapper(point_column="pt", set_position=set_position)
     root_layer = sb.AnnotationLayerConfig(
         layer_name, color="#bfae00", mapping_rules=[pt], active=active
     )
-    root_sb = sb.StateBuilder([root_layer])
+    root_sb = sb.StateBuilder([root_layer], resolution=GUIDEBOOK_EXPECTED_RESOLUTION)
     root_df = pd.DataFrame(
         {
             "pt": (
@@ -181,7 +209,7 @@ def generate_lvl2_proofreading(
     root_id,
     server_address,
     root_point=None,
-    root_point_resolution=[4, 4, 40],
+    root_point_resolution=GUIDEBOOK_EXPECTED_RESOLUTION,
     refine_branch_points=True,
     refine_end_points=True,
     point_radius=300,
