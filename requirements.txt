@@ -8,7 +8,7 @@ scipy
 nglui
 meshparty>=1.10.2
 pcg_skel>=0.0.9
-cloud-volume
+git+https://github.com/fcollman/cloud-volume.git@fcc-nkem-float-res-fix-rebasse#egg=cloud-volume
 fastremap
 middle-auth-client==3.1.1
 redis
