@@ -54,7 +54,7 @@ def parse_location(root_loc):
     return root_loc
 
 
-@bp.route(f"{api_prefix}/datastack/<datastack>/root_id/l2skeleton")
+@bp.route(f"{api_prefix}/datastack/<datastack>/l2skeleton")
 @auth_required
 def generate_guidebook_chunkgraph(datastack):
     root_id = request.args.get("root_id", None)

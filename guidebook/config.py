@@ -11,7 +11,7 @@ class BaseConfig(object):
     NEUROGLANCER_RESOLUTION = os.environ.get("NEUROGLANCER_RESOLUTION", None)
 
     if os.environ.get("DAF_CREDENTIALS", None) is not None:
-        with open(os.environ.get("DAF_CREDENTIALS"), "r") as f:
+        with open(os.path.expanduser(os.environ.get("DAF_CREDENTIALS")), "r") as f:
             AUTH_TOKEN = json.load(f)["token"]
     else:
         AUTH_TOKEN = None
