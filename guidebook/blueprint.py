@@ -11,10 +11,7 @@ from .worker import conn
 api_version = 0
 url_prefix = f"/guidebook"
 api_prefix = f"/api/v{api_version}"
-with current_app.app_context():
-    if "NEUROGLANCER_RESOLUTION" in current_app.config:
-        vxl_str = current_app.config.get("NEUROGLANCER_RESOLUTION")
-        voxel_resolution = np.array([int(x) for x in vxl_str.split(",")])
+
 
 bp = Blueprint("guidebook", __name__, url_prefix=url_prefix)
 __version__ = "0.0.12"
@@ -51,23 +48,29 @@ def encode_root_location(form_data):
         )
 
 
-def parse_root_location(root_loc):
+def parse_location(root_loc):
     if root_loc is not None:
         root_loc = np.array(root_loc.split("_")).astype(int)
-        print(f"Root location is: {root_loc}")
     return root_loc
 
 
-@bp.route(f"{api_prefix}/datastack/<datastack>/root_id/<int:root_id>/l2skeleton")
+@bp.route(f"{api_prefix}/datastack/<datastack>/root_id/l2skeleton")
 @auth_required
-def generate_guidebook_chunkgraph(datastack, root_id):
-    root_loc = parse_root_location(request.args.get("root_location", None))
+def generate_guidebook_chunkgraph(datastack):
+    root_id = request.args.get("root_id", None)
+    root_loc = parse_location(request.args.get("root_location", None))
     branch_points = request.args.get("branch_points", "True") == "True"
     end_points = request.args.get("end_points", "True") == "True"
     collapse_soma = request.args.get("collapse_soma") == "True"
     segmentation_fallback = request.args.get("segmentation_fallback", False) == "True"
+    split_loc = parse_location(request.args.get("split_location", None))
+    downstream = request.args.get("downstream") == "True"
+    root_id_from_point = request.args.get("root_id_from_point") == "True"
     kwargs = {
+        "datastack": datastack,
+        "server_address": current_app.config.get("GLOBAL_SERVER_ADDRESS"),
         "return_as": "url",
+        "root_id": root_id,
         "root_point": root_loc,
         "refine_branch_points": branch_points,
         "refine_end_points": end_points,
@@ -75,11 +78,13 @@ def generate_guidebook_chunkgraph(datastack, root_id):
         "n_parallel": int(current_app.config.get("N_PARALLEL")),
         "segmentation_fallback": segmentation_fallback,
         "invalidation_d": int(current_app.config.get("INVALIDATION_D")),
+        "selection_point": split_loc,
+        "downstream": downstream,
+        "root_id_from_point": root_id_from_point,
     }
     print(kwargs)
     job = q.enqueue_call(
         generate_lvl2_proofreading,
-        args=(datastack, int(root_id), current_app.config.get("GLOBAL_SERVER_ADDRESS")),
         kwargs=kwargs,
         result_ttl=5000,
         timeout=600,
@@ -119,6 +124,8 @@ def lvl2_form():
     if form.validate_on_submit():
         datastack = current_app.config.get("DATASTACK")
         root_id = form.root_id.data
+        if len(root_id) == 0:
+            root_id = None
         point_option = form.point_option.data
         segmentation_fallback = form.segmentation_fallback.data
         if point_option == "both":
@@ -135,6 +142,14 @@ def lvl2_form():
         except Exception as e:
             return error_page(e)
         root_is_soma = form.root_is_soma.data
+
+        split_location_formatted = encode_root_location(form.split_location.data)
+        if form.split_option.data == "downstream":
+            downstream = True
+        else:
+            downstream = False
+        root_id_from_point = form.root_id_from_root_loc.data
+
         url = url_for(
             ".generate_guidebook_chunkgraph",
             datastack=datastack,
@@ -144,6 +159,9 @@ def lvl2_form():
             end_points=end_points,
             collapse_soma=root_is_soma,
             segmentation_fallback=segmentation_fallback,
+            split_location=split_location_formatted,
+            downstream=downstream,
+            root_id_from_point=root_id_from_point,
         )
         return redirect(url)
 

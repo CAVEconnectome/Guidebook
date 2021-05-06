@@ -5,7 +5,7 @@ import pandas as pd
 import pcg_skel
 from annotationframeworkclient import FrameworkClient
 from nglui import statebuilder as sb
-from pcg_skel.chunk_tools import get_closest_lvl2_chunk
+from pcg_skel.chunk_tools import get_closest_lvl2_chunk, get_root_id_from_point
 from scipy import sparse
 
 SK_KWARGS = dict(
@@ -54,6 +54,7 @@ def branch_sb_data(
     set_position=False,
     active=False,
     color="#299bff",
+    voxel_resolution=[4, 4, 40],
 ):
     points_bp = sb.PointMapper(
         point_column="bp_locs", group_column="bp_group", set_position=set_position
@@ -71,7 +72,7 @@ def branch_sb_data(
     bp_df = pd.DataFrame(
         {
             "bps": bps,
-            "bp_locs": (skf.vertices[bps] / np.array([4, 4, 40])).tolist(),
+            "bp_locs": (skf.vertices[bps] / np.array(voxel_resolution)).tolist(),
             "dfr": skf.distance_to_root[bps],
             "bp_group": bp_lbls,
         }
@@ -80,7 +81,38 @@ def branch_sb_data(
     return sb_bp, bp_df.sort_values(by=["bp_group", "dfr"])
 
 
-def end_point_sb_data(skf, labels, tags=[], active=False, color="#FFFFFF"):
+def selection_point_sb_data(
+    selection_point,
+    direction,
+    active=False,
+    color="#FF2200",
+):
+    points = sb.PointMapper(point_column="pt_locs", set_position=active)
+    sp_layer = sb.AnnotationLayerConfig(
+        f"{direction}_point",
+        mapping_rules=points,
+        active=active,
+        color=color,
+    )
+    sb_sp = sb.StateBuilder(layers=[sp_layer])
+    pts = np.atleast_2d(selection_point)
+    sp_df = pd.DataFrame(
+        {
+            "pt_locs": pts.tolist(),
+        }
+    )
+    return sb_sp, sp_df
+
+
+def end_point_sb_data(
+    skf,
+    labels,
+    tags=[],
+    active=False,
+    color="#FFFFFF",
+    voxel_resolution=[4, 4, 40],
+    omit_indices=[],
+):
     points = sb.PointMapper(point_column="ep_locs", set_position=active)
     ep_layer = sb.AnnotationLayerConfig(
         "end_points", mapping_rules=points, active=active, color=color, tags=tags
@@ -88,12 +120,13 @@ def end_point_sb_data(skf, labels, tags=[], active=False, color="#FFFFFF"):
     sb_ep = sb.StateBuilder(layers=[ep_layer])
 
     eps = skf.end_points_undirected
+    eps = eps[~np.isin(eps, omit_indices)]
     ep_lbls = labels[eps]
 
     ep_df = pd.DataFrame(
         {
             "eps": eps,
-            "ep_locs": (skf.vertices[eps] / np.array([4, 4, 40])).tolist(),
+            "ep_locs": (skf.vertices[eps] / np.array(voxel_resolution)).tolist(),
             "dfr": skf.distance_to_root[eps],
             "ep_group": ep_lbls,
         }
@@ -160,6 +193,7 @@ def generate_lvl2_proofreading(
     selection_point=None,
     downstream=True,
     n_parallel=1,
+    root_id_from_point=False,
 ):
     if verbose:
         t0 = time.time()
@@ -171,6 +205,11 @@ def generate_lvl2_proofreading(
         refine = "bp"
     else:
         refine = "ep"
+
+    if root_id_from_point and root_id is None:
+        root_id = get_root_id_from_point(root_point, root_point_resolution, client)
+        if root_id == 0:
+            raise ValueError("Root point was not on any segmentation")
 
     l2_sk, (l2dict, l2dict_r) = pcg_skel.pcg_skeleton(
         root_id,
@@ -214,8 +253,13 @@ def generate_lvl2_proofreading(
             voxel_resolution=root_point_resolution,
             radius=point_radius,
         )
+        selection_skinds = l2_sk.filter_unmasked_indices(
+            np.array([l2dict[selection_l2id]])
+        )
+    else:
+        selection_skinds = []
 
-    lbls = process_node_groups(l2_sk, cp_max_thresh=200_000)
+    lbls = process_node_groups(l2_sk, cp_max_thresh=250_000)
     if refine_branch_points:
         bp_sb, bp_df = branch_sb_data(
             l2_sk,
@@ -223,6 +267,7 @@ def generate_lvl2_proofreading(
             tags=BP_PROOFREADING_TAGS,
             set_position=False,
             active=True,
+            voxel_resolution=root_point_resolution,
         )
         sbs.append(bp_sb)
         dfs.append(bp_df)
@@ -234,9 +279,20 @@ def generate_lvl2_proofreading(
             tags=EP_PROOFREADING_TAGS,
             active=False,
             color="#FFFFFF",
+            voxel_resolution=root_point_resolution,
+            omit_indices=selection_skinds,
         )
         sbs.append(ep_sb)
         dfs.append(ep_df)
+
+    if len(selection_skinds) > 0:
+        direction = {True: "downstream", False: "upstream"}
+        sp_sb, sp_df = selection_point_sb_data(
+            selection_point,
+            direction.get(downstream),
+        )
+        sbs.append(sp_sb)
+        dfs.append(sp_df)
 
     sb_pf = sb.ChainedStateBuilder(sbs)
     if verbose:
@@ -266,5 +322,6 @@ def mask_skeleton(
 
     if downstream is False:
         mask = np.invert(mask)
+        mask[selection_skid] = ~mask[selection_skid]
 
     return sk.apply_mask(mask), selection_l2id
