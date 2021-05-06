@@ -12,7 +12,14 @@
             {{ form.root_location.label }} <br>
             {{ form.root_location(size=24 )}} <br>
             {{ form.root_is_soma }}
-            {{ form.root_is_soma.label }}
+            {{ form.root_is_soma.label }} <br>
+            {{ form.root_id_from_root_loc }}
+            {{ form.root_id_from_root_loc.label }}
+        </p>
+        <p>
+            {{ form.split_location.label }} <br>
+            {{ form.split_location(size=24)}} <br>
+            {{ form.split_option}}
         </p>
         {%- if allow_segmentation -%}
         <p>
