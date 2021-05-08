@@ -222,10 +222,13 @@ def generate_lvl2_proofreading(
     downstream=True,
     n_parallel=1,
     root_id_from_point=False,
+    auth_token_key=None,
 ):
     if verbose:
         t0 = time.time()
-    client = FrameworkClient(datastack, server_address=server_address)
+    client = FrameworkClient(
+        datastack, server_address=server_address, auth_token_key=auth_token_key
+    )
 
     if refine_end_points and refine_branch_points:
         refine = "bpep"

@@ -58,6 +58,8 @@ def parse_location(root_loc):
 @auth_required
 def generate_guidebook_chunkgraph(datastack):
     root_id = request.args.get("root_id", None)
+    if root_id is not None:
+        root_id = int(root_id)
     root_loc = parse_location(request.args.get("root_location", None))
     branch_points = request.args.get("branch_points", "True") == "True"
     end_points = request.args.get("end_points", "True") == "True"
@@ -84,6 +86,7 @@ def generate_guidebook_chunkgraph(datastack):
         "selection_point": split_loc,
         "downstream": downstream,
         "root_id_from_point": root_id_from_point,
+        "auth_token_key": current_app.config.get("AUTH_TOKEN_KEY"),
     }
     print(kwargs)
     job = q.enqueue_call(

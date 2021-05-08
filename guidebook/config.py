@@ -14,9 +14,10 @@ class BaseConfig(object):
     GUIDEBOOK_EXPECTED_RESOLUTION = [
         r for r in map(int, GUIDEBOOK_EXPECTED_RESOLUTION.split(","))
     ]
+    AUTH_TOKEN_KEY = os.environ.get("AUTH_TOKEN_KEY", "token")
     if os.environ.get("DAF_CREDENTIALS", None) is not None:
         with open(os.path.expanduser(os.environ.get("DAF_CREDENTIALS")), "r") as f:
-            AUTH_TOKEN = json.load(f)["token"]
+            AUTH_TOKEN = json.load(f)[AUTH_TOKEN_KEY]
     else:
         AUTH_TOKEN = None
 
