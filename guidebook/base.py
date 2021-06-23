@@ -3,7 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 import pcg_skel
-from annotationframeworkclient import FrameworkClient
+from caveclient import CAVEClient
 from nglui import statebuilder as sb
 from pcg_skel.chunk_tools import get_closest_lvl2_chunk, get_root_id_from_point
 from scipy import sparse
@@ -226,7 +226,7 @@ def generate_lvl2_proofreading(
 ):
     if verbose:
         t0 = time.time()
-    client = FrameworkClient(
+    client = CAVEclient(
         datastack, server_address=server_address, auth_token_key=auth_token_key
     )
 
