@@ -1,6 +1,13 @@
 import pandas as pd
 import numpy as np
 from scipy import interpolate
+from nglui import statebuilder as sb
+from .topo_points import selection_point_sb_data
+
+from .parameters import (
+    CONTRAST_LOOKUP,
+    GUIDEBOOK_EXPECTED_RESOLUTION,
+)
 
 
 def sample_end_points(sk, n_choice, ep_segment_thresh=0):
@@ -17,7 +24,7 @@ def viable_end_points(sk, ep_segment_thresh=0):
     cp_len = []
     for cp in sk.cover_paths:
         eps.append(cp[0])
-        cp_len.append(sk.path_length(cp) / 1000)
+        cp_len.append(sk.path_length(cp))
     eps = np.array(eps)
     cp_len = np.array(cp_len)
     return eps[cp_len > ep_segment_thresh]
@@ -88,3 +95,77 @@ def generate_path_df(
             "group": grp,
         }
     )
+
+
+def base_builder(client, root_id, voxel_resolution):
+    black = CONTRAST_LOOKUP.get(client.datastack_name, dict()).get("black", 0)
+    white = CONTRAST_LOOKUP.get(client.datastack_name, dict()).get("white", 1)
+    img = sb.ImageLayerConfig(
+        client.info.image_source(), contrast_controls=True, black=black, white=white
+    )
+    seg = sb.SegmentationLayerConfig(
+        client.info.segmentation_source(),
+        fixed_ids=[root_id],
+        alpha_3d=0.6,
+    )
+
+    return sb.StateBuilder([img, seg], resolution=voxel_resolution), None
+
+
+def path_layers(l2_sk, paths, spacing, interp_method, voxel_resolution):
+
+    df = generate_path_df(
+        paths,
+        l2_sk,
+        spacing,
+        interp_method=interp_method,
+        voxel_resolution=voxel_resolution,
+    )
+
+    anno = sb.AnnotationLayerConfig(
+        "selected_paths",
+        mapping_rules=sb.LineMapper("ptA", "ptB", group_column="group"),
+    )
+
+    return sb.StateBuilder(layers=[anno], resolution=voxel_resolution), df
+
+
+def construct_cover_paths(
+    l2_sk,
+    n_choice,
+    spacing,
+    root_id,
+    ep_segment_thresh,
+    client,
+    voxel_resolution=GUIDEBOOK_EXPECTED_RESOLUTION,
+    interp_method="linear",
+    selection_point=None,
+    downstream=True,
+):
+    sbs = []
+    dfs = []
+
+    sb_base, df_base = base_builder(client, root_id, voxel_resolution)
+    sbs.append(sb_base)
+    dfs.append(df_base)
+
+    if selection_point is not None:
+        direction = {True: "downstream", False: "upstream"}
+        sb_sp, sp_df = selection_point_sb_data(
+            selection_point=selection_point,
+            direction=direction.get(downstream),
+            voxel_resolution=voxel_resolution,
+        )
+        sbs.append(sb_sp)
+        dfs.append(sp_df)
+
+    eps = sample_end_points(l2_sk, n_choice, ep_segment_thresh)
+    paths = l2_sk.cover_paths_specific(eps)
+
+    sb_path, df_path = path_layers(
+        l2_sk, paths, spacing, interp_method, voxel_resolution
+    )
+    sbs.append(sb_path)
+    dfs.append(df_path)
+
+    return dfs, sbs
