@@ -1,7 +1,7 @@
 import time
 import pcg_skel
 import numpy as np
-from annotationframeworkclient import FrameworkClient
+from caveclient import CAVEclient
 from nglui import statebuilder as sb
 from pcg_skel.chunk_tools import get_root_id_from_point, get_closest_lvl2_chunk
 from .topo_points import topo_point_construction
@@ -60,7 +60,7 @@ def generate_lvl2_paths(
 ):
     if verbose:
         t0 = time.time()
-    client = FrameworkClient(
+    client = CAVEclient(
         datastack, server_address=server_address, auth_token_key=auth_token_key
     )
 
@@ -140,7 +140,7 @@ def generate_lvl2_proofreading(
 ):
     if verbose:
         t0 = time.time()
-    client = FrameworkClient(
+    client = CAVEclient(
         datastack, server_address=server_address, auth_token_key=auth_token_key
     )
 

@@ -1,13 +1,13 @@
 flask
 flask-wtf
 flask_cors
-annotationframeworkclient
+caveclient
 pandas
 numpy
 scipy
 nglui
-meshparty>=1.10.2
-pcg_skel>=0.0.9
+meshparty>=1.13.2
+pcg_skel>=0.1.0
 cloud-volume
 fastremap
 middle-auth-client>=3.6.4

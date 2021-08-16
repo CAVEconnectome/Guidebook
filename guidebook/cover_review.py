@@ -11,11 +11,11 @@ from .parameters import (
 
 
 def sample_end_points(sk, n_choice, ep_segment_thresh=0):
-    eps = viable_end_points(sk, ep_segment_thresh=ep_segment_thresh)
+    eps = viable_end_points(sk, ep_segment_thresh=int(ep_segment_thresh))
     if n_choice == "all":
         return eps
     else:
-        return np.random.choice(eps, n_choice, replace=False)
+        return np.random.choice(eps, int(n_choice), replace=False)
 
 
 def viable_end_points(sk, ep_segment_thresh=0):
@@ -108,8 +108,12 @@ def base_builder(client, root_id, voxel_resolution):
         fixed_ids=[root_id],
         alpha_3d=0.6,
     )
-
-    return sb.StateBuilder([img, seg], resolution=voxel_resolution), None
+    sb_base = sb.StateBuilder(
+        layers=[img, seg],
+        state_server=client.state.state_service_endpoint,
+        resolution=voxel_resolution,
+    )
+    return sb_base, None
 
 
 def path_layers(l2_sk, paths, spacing, interp_method, voxel_resolution):
