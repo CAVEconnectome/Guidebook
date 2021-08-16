@@ -67,6 +67,12 @@ def generate_guidebook_chunkgraph(datastack):
     split_loc = parse_location(request.args.get("split_location", None))
     downstream = request.args.get("downstream") == "True"
     root_id_from_point = request.args.get("root_id_from_point") == "True"
+
+    root_point_resolution = current_app.config.get(
+        "GUIDEBOOK_EXPECTED_RESOLUTION", [4, 4, 40]
+    )
+    print(f"Resolution: {root_point_resolution}")
+
     kwargs = {
         "datastack": datastack,
         "server_address": current_app.config.get("GLOBAL_SERVER_ADDRESS"),
@@ -77,9 +83,7 @@ def generate_guidebook_chunkgraph(datastack):
         "refine_end_points": end_points,
         "collapse_soma": collapse_soma,
         "n_parallel": int(current_app.config.get("N_PARALLEL")),
-        "root_point_resolution": current_app.config.get(
-            "GUIDEBOOK_EXPECTED_RESOLUTION", [4, 4, 40]
-        ),
+        "root_point_resolution": root_point_resolution,
         "segmentation_fallback": segmentation_fallback,
         "invalidation_d": int(current_app.config.get("INVALIDATION_D")),
         "selection_point": split_loc,
@@ -231,12 +235,18 @@ def generate_guidebook_paths(datastack):
     else:
         segment_length_thresh = 0
 
+    root_point_resolution = current_app.config.get(
+        "GUIDEBOOK_EXPECTED_RESOLUTION", [4, 4, 40]
+    )
+    print(f"Resolution: {root_point_resolution}")
+
     kwargs = {
         "datastack": datastack,
         "server_address": current_app.config.get("GLOBAL_SERVER_ADDRESS"),
         "return_as": "url",
         "root_id": root_id,
         "root_point": root_loc,
+        "root_point_resolution": root_point_resolution,
         "n_choice": num_paths,
         "segment_length_thresh": segment_length_thresh,
         "spacing": int(spacing),

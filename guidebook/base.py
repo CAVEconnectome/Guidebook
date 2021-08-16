@@ -60,6 +60,7 @@ def generate_lvl2_paths(
 ):
     if verbose:
         t0 = time.time()
+
     client = CAVEclient(
         datastack, server_address=server_address, auth_token_key=auth_token_key
     )

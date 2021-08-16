@@ -10,7 +10,7 @@ services:
     volumes:
       - ~/.cloudvolume:/home/nginx/.cloudvolume
     env_file:
-      - ./.env.dev
+      - ./.env.v1dd
   worker:
     image: "guidebook:tag"
     build:
