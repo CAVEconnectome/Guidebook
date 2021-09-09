@@ -9,6 +9,7 @@ from .cover_review import construct_cover_paths
 
 from .parameters import (
     GUIDEBOOK_EXPECTED_RESOLUTION,
+    PATH_SPACING,
 )
 
 
@@ -45,7 +46,7 @@ def generate_lvl2_paths(
     root_point_resolution=GUIDEBOOK_EXPECTED_RESOLUTION,
     n_choice="all",
     segment_length_thresh=0,
-    spacing=3000,
+    spacing=PATH_SPACING,
     interp_method="linear",
     selection_point=None,
     downstream=True,

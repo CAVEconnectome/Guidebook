@@ -7,6 +7,7 @@ from .topo_points import selection_point_sb_data
 from .parameters import (
     CONTRAST_LOOKUP,
     GUIDEBOOK_EXPECTED_RESOLUTION,
+    PATH_SPACING,
 )
 
 
@@ -64,7 +65,11 @@ def interpolate_path(
 
 
 def generate_path_df(
-    paths, sk, interp_spacing=2500, interp_method="linear", voxel_resolution=[4, 4, 40]
+    paths,
+    sk,
+    interp_spacing=PATH_SPACING,
+    interp_method="linear",
+    voxel_resolution=[4, 4, 40],
 ):
     grp = []
     ptsA = []

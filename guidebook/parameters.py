@@ -20,4 +20,5 @@ BP_PROOFREADING_TAGS = ["checked", "error"]
 res = os.environ.get("GUIDEBOOK_EXPECTED_RESOLUTION", "4,4,40")
 GUIDEBOOK_EXPECTED_RESOLUTION = np.array([r for r in map(int, res.split(","))])
 
-SHORT_SEGMENT_THRESH = 5000
+SHORT_SEGMENT_THRESH = os.environ.get("GUIDEBOOK_SHORT_SEGMENT_THRESH", 15000)
+PATH_SPACING = os.environ.get("GUIDEBOOK_PATH_SPACING", 2000)
