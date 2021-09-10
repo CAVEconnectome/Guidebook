@@ -145,3 +145,4 @@ dmypy.json
 .prof
 
 *.rdb
+.vscode/settings.json
