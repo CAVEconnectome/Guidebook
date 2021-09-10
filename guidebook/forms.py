@@ -1,37 +1,30 @@
+from collections import defaultdict
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, BooleanField, SelectField, RadioField
 from wtforms.validators import Optional, ValidationError
 
 
-class Lvl2SkeletonizeForm(FlaskForm):
+class L2SkeletonizeForm(FlaskForm):
     root_id = StringField("Root ID", default="", validators=[])
     root_location = StringField(
         "Root location (optional)", default="", validators=[Optional()]
     )
     root_is_soma = BooleanField("Root location is soma", default=True)
     root_id_from_root_loc = BooleanField("Guess ID from point", default=True)
-    point_option = SelectField(
-        "Points",
-        choices=[
-            ("both", "Branch and End Points"),
-            ("bp", "Branch Points"),
-            ("ep", "End Points"),
-        ],
-    )
     split_location = StringField(
         "Restriction point (optional)", default="", validators=[Optional()]
     )
     split_option = SelectField(
         "Direction of restriction",
         choices=[
-            ("upstream", "Upstream"),
-            ("downstream", "Downstream"),
+            ("upstream", "Inward from point"),
+            ("downstream", "Outward from point"),
         ],
     )
+    submit = SubmitField("Generate Neuroglancer Link")
     segmentation_fallback = BooleanField(
         "Use segmentation as fallback (slower but more accurate)", default=False
     )
-    submit = SubmitField("Generate Neuroglancer Link")
 
     def validate_root_id(self, field):
         if len(field.data) == 0:
@@ -48,3 +41,29 @@ class Lvl2SkeletonizeForm(FlaskForm):
                 )
         else:
             return True
+
+
+class Lvl2PointForm(L2SkeletonizeForm):
+    point_option = SelectField(
+        "Points",
+        choices=[
+            ("both", "Branch and End Points"),
+            ("bp", "Branch Points"),
+            ("ep", "End Points"),
+        ],
+    )
+
+
+class Lvl2PathForm(L2SkeletonizeForm):
+    num_paths = SelectField(
+        "Paths to Sample",
+        choices=[
+            ("all", "All"),
+            ("five", "5"),
+            ("ten", "10"),
+            ("fifteen", "15"),
+        ],
+        default="all",
+    )
+
+    exclude_short = BooleanField("Exclude Short Paths", default=True)
