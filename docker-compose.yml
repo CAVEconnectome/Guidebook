@@ -19,7 +19,7 @@ services:
     volumes:
       - ~/.cloudvolume:/root/.cloudvolume
     env_file:
-      - ./.env.dev
+      - ./.env.v1dd
     command: python guidebook/worker.py
   redis:
     image: redis:latest

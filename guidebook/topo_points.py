@@ -173,17 +173,16 @@ def root_sb_data(
     root_layer = sb.AnnotationLayerConfig(
         layer_name, color="#bfae00", mapping_rules=[pt], active=active
     )
+    root_point = sk._rooted.vertices[
+        sk._rooted.root
+    ]  # Works even if root is not in the skeleton mask
     root_sb = sb.StateBuilder([root_layer], resolution=GUIDEBOOK_EXPECTED_RESOLUTION)
     root_df = pd.DataFrame(
         {
-            "pt": (
-                np.atleast_2d(sk.vertices[sk.root]) / np.array(voxel_resolution)
-            ).tolist(),
+            "pt": (np.atleast_2d(root_point) / np.array(voxel_resolution)).tolist(),
         }
     )
     return root_sb, root_df
-
-
 
 
 def topo_point_construction(
@@ -210,7 +209,11 @@ def topo_point_construction(
     sbs.append(base_sb)
     dfs.append(base_df)
 
-    rt_sb, rt_df = root_sb_data(l2_sk, set_position=True)
+    rt_sb, rt_df = root_sb_data(
+        l2_sk,
+        set_position=True,
+        voxel_resolution=root_point_resolution,
+    )
     sbs.append(rt_sb)
     dfs.append(rt_df)
 
@@ -245,6 +248,7 @@ def topo_point_construction(
         sp_sb, sp_df = selection_point_sb_data(
             selection_point,
             direction.get(downstream),
+            voxel_resolution=root_point_resolution,
         )
         sbs.append(sp_sb)
         dfs.append(sp_df)

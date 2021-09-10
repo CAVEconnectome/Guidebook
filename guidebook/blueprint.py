@@ -1,4 +1,4 @@
-from guidebook.parameters import SHORT_SEGMENT_THRESH
+from guidebook.parameters import SHORT_SEGMENT_THRESH, SHOW_PATH_TOOL
 from flask import Blueprint, redirect, request, render_template, url_for, current_app
 from .base import generate_lvl2_proofreading, generate_lvl2_paths
 from .forms import Lvl2PathForm, Lvl2PointForm
@@ -20,6 +20,10 @@ __version__ = "0.0.16"
 q = Queue(connection=conn)
 
 
+class GuidebookException(Exception):
+    pass
+
+
 @bp.route("/version")
 def version_text():
     return f"Neuron Guidebook v.{__version__}"
@@ -32,6 +36,7 @@ def landing_page():
         "landing.html",
         title=f"Neuron Guidebook",
         datastack=current_app.config.get("DATASTACK"),
+        show_path_tool=SHOW_PATH_TOOL,
         version=__version__,
     )
 
@@ -214,6 +219,9 @@ def lvl2_point_form():
 @bp.route(f"{api_prefix}/datastack/<datastack>/l2paths")
 @auth_required
 def generate_guidebook_paths(datastack):
+    if not SHOW_PATH_TOOL:
+        raise GuidebookException("Path tool is not enabled")
+
     root_id = request.args.get("root_id", None)
     if root_id is not None:
         root_id = int(root_id)
@@ -272,6 +280,9 @@ def generate_guidebook_paths(datastack):
 @bp.route("coverpaths", methods=["GET", "POST"])
 @auth_required
 def lvl2_path_form():
+    if not SHOW_PATH_TOOL:
+        return error_page("Path tool is not enabled")
+
     form = Lvl2PathForm()
     if form.validate_on_submit():
         datastack = current_app.config.get("DATASTACK")
