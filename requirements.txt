@@ -1,7 +1,7 @@
 flask
 flask-wtf
 flask_cors
-annotationframeworkclient
+caveclient
 pandas
 numpy
 scipy
