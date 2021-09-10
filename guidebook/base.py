@@ -3,7 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 import pcg_skel
-from caveclient import CAVEClient
+from caveclient import CAVEclient
 from nglui import statebuilder as sb
 from pcg_skel.chunk_tools import get_closest_lvl2_chunk, get_root_id_from_point
 from scipy import sparse
