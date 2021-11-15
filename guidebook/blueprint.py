@@ -107,7 +107,7 @@ def generate_guidebook_chunkgraph(datastack):
     return redirect(url_for(".show_result_points", job_key=job.get_id()))
 
 
-@bp.route("coverpaths/results/<job_key>")
+@bp.route("skeletonize/results/<job_key>")
 @auth_required
 def show_result_points(job_key):
     reload_time = 10
@@ -128,7 +128,7 @@ def show_result_points(job_key):
         return error_page(str(e))
 
 
-@bp.route("skeletonize/results/<job_key>")
+@bp.route("coverpaths/results/<job_key>")
 @auth_required
 def show_result_paths(job_key):
     reload_time = 60
