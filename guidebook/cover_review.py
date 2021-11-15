@@ -11,12 +11,37 @@ from .parameters import (
 )
 
 
-def sample_end_points(sk, n_choice, ep_segment_thresh=0):
+def sample_end_points(sk, n_choice=None, target_length=None, ep_segment_thresh=0):
+    if target_length is not None:
+        return end_points_for_target_length(sk, target_length, ep_segment_thresh)
+    if n_choice is not None:
+        return end_points_random_choice(sk, n_choice, ep_segment_thresh)
+    else:
+        raise ValueError("Either n_choice or target_length must be specified")
+
+
+def end_points_random_choice(sk, n_choice, ep_segment_thresh):
     eps = viable_end_points(sk, ep_segment_thresh=int(ep_segment_thresh))
+
     if n_choice == "all":
         return eps
     else:
         return np.random.choice(eps, int(n_choice), replace=False)
+
+
+def end_points_for_target_length(sk, target_length, ep_segment_thresh):
+    eps = viable_end_points(sk, ep_segment_thresh=int(ep_segment_thresh))
+
+    selected_ep = np.array([], dtype=int)
+    net_path_length = 0
+
+    while net_path_length < target_length and len(selected_ep) < len(eps):
+        add_ep = np.random.choice(eps[~np.isin(eps, selected_ep)])
+        selected_ep = np.append(selected_ep, add_ep)
+        cps = sk.cover_paths_specific(selected_ep)
+        net_path_length = sum([sk.path_length(p) for p in cps])
+
+    return selected_ep
 
 
 def viable_end_points(sk, ep_segment_thresh=0):
@@ -146,6 +171,7 @@ def construct_cover_paths(
     root_id,
     ep_segment_thresh,
     client,
+    target_length=None,
     voxel_resolution=GUIDEBOOK_EXPECTED_RESOLUTION,
     interp_method="linear",
     selection_point=None,
@@ -168,7 +194,12 @@ def construct_cover_paths(
         sbs.append(sb_sp)
         dfs.append(sp_df)
 
-    eps = sample_end_points(l2_sk, n_choice, ep_segment_thresh)
+    eps = sample_end_points(
+        l2_sk,
+        n_choice=n_choice,
+        target_length=target_length,
+        ep_segment_thresh=ep_segment_thresh,
+    )
     paths = l2_sk.cover_paths_specific(eps)
 
     sb_path, df_path = path_layers(
