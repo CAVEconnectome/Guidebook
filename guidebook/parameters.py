@@ -18,7 +18,7 @@ EP_PROOFREADING_TAGS = ["checked", "error", "correct"]
 BP_PROOFREADING_TAGS = ["checked", "error"]
 
 res = os.environ.get("GUIDEBOOK_EXPECTED_RESOLUTION", "1,1,1")
-GUIDEBOOK_EXPECTED_RESOLUTION = np.array([r for r in map(int, res.split(","))])
+GUIDEBOOK_EXPECTED_RESOLUTION = np.array([r for r in map(float, res.split(","))])
 
 path_tool = os.environ.get("GUIDEBOOK_SHOW_PATH_TOOL", "false")
 SHOW_PATH_TOOL = path_tool == "true"
