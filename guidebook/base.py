@@ -7,11 +7,6 @@ from pcg_skel.chunk_tools import get_root_id_from_point, get_closest_lvl2_chunk
 from .topo_points import topo_point_construction
 from .cover_review import construct_cover_paths
 
-from .parameters import (
-    GUIDEBOOK_EXPECTED_RESOLUTION,
-    PATH_SPACING,
-)
-
 
 def mask_skeleton(
     root_id, sk, l2dict, selection_point, downstream, client, voxel_resolution, radius
@@ -43,10 +38,10 @@ def generate_lvl2_paths(
     root_id,
     server_address,
     root_point=None,
-    root_point_resolution=GUIDEBOOK_EXPECTED_RESOLUTION,
+    root_point_resolution=[1, 1, 1],
     n_choice="all",
     segment_length_thresh=0,
-    spacing=PATH_SPACING,
+    spacing=2_000,
     interp_method="linear",
     selection_point=None,
     downstream=True,
@@ -58,6 +53,8 @@ def generate_lvl2_paths(
     auth_token_key=None,
     return_as="url",
     verbose=True,
+    l2cache=False,
+    contrast_lookup={},
 ):
     if verbose:
         t0 = time.time()
@@ -65,6 +62,8 @@ def generate_lvl2_paths(
     client = CAVEclient(
         datastack, server_address=server_address, auth_token_key=auth_token_key
     )
+
+    cv = client.info.segmentation_cloudvolume(use_https=True, progress=True)
 
     if root_id_from_point and root_id is None:
         root_id = get_root_id_from_point(root_point, root_point_resolution, client)
@@ -74,6 +73,7 @@ def generate_lvl2_paths(
     l2_sk, (l2dict, l2dict_r) = pcg_skel.pcg_skeleton(
         root_id,
         client=client,
+        cv=cv,
         refine="all",
         root_point=root_point,
         root_point_resolution=root_point_resolution,
@@ -84,7 +84,8 @@ def generate_lvl2_paths(
         invalidation_d=invalidation_d,
         root_point_search_radius=point_radius,
         segmentation_fallback=False,
-        n_parallel=n_parallel,
+        n_parallel=1,
+        l2cache=l2cache,
     )
 
     if selection_point is not None:
@@ -100,15 +101,16 @@ def generate_lvl2_paths(
         )
 
     dfs, sbs = construct_cover_paths(
-        l2_sk,
-        n_choice,
-        spacing,
-        root_id,
-        segment_length_thresh,
-        client,
-        root_point_resolution,
-        interp_method,
-        selection_point,
+        l2_sk=l2_sk,
+        n_choice=n_choice,
+        spacing=spacing,
+        root_id=root_id,
+        ep_segment_thresh=segment_length_thresh,
+        client=client,
+        voxel_resolution=root_point_resolution,
+        interp_method=interp_method,
+        selection_point=selection_point,
+        contrast_lookup=contrast_lookup,
     )
 
     csb = sb.ChainedStateBuilder(sbs)
@@ -125,7 +127,7 @@ def generate_lvl2_proofreading(
     root_id,
     server_address,
     root_point=None,
-    root_point_resolution=GUIDEBOOK_EXPECTED_RESOLUTION,
+    root_point_resolution=[1, 1, 1],
     refine_branch_points=True,
     refine_end_points=True,
     point_radius=300,
@@ -139,12 +141,17 @@ def generate_lvl2_proofreading(
     n_parallel=1,
     root_id_from_point=False,
     auth_token_key=None,
+    l2cache=False,
+    contrast_lookup={},
+    ep_tags=[],
+    bp_tags=[],
 ):
     if verbose:
         t0 = time.time()
     client = CAVEclient(
         datastack, server_address=server_address, auth_token_key=auth_token_key
     )
+    cv = client.info.segmentation_cloudvolume(use_https=True, progress=True)
 
     if refine_end_points and refine_branch_points:
         refine = "bpep"
@@ -161,6 +168,7 @@ def generate_lvl2_proofreading(
     l2_sk, (l2dict, l2dict_r) = pcg_skel.pcg_skeleton(
         root_id,
         client=client,
+        cv=cv,
         refine=refine,
         root_point=root_point,
         root_point_resolution=root_point_resolution,
@@ -172,6 +180,7 @@ def generate_lvl2_proofreading(
         root_point_search_radius=point_radius,
         segmentation_fallback=segmentation_fallback,
         n_parallel=n_parallel,
+        l2cache=l2cache,
     )
 
     if selection_point is not None:
@@ -203,6 +212,9 @@ def generate_lvl2_proofreading(
         selection_skinds,
         downstream,
         client,
+        contrast_lookup=contrast_lookup,
+        ep_proofreading_tags=ep_tags,
+        bp_proofreading_tags=bp_tags,
     )
 
     sb_pf = sb.ChainedStateBuilder(sbs)

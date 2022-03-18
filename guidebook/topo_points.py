@@ -1,15 +1,7 @@
 import numpy as np
 import pandas as pd
 from scipy import sparse
-from pcg_skel.chunk_tools import get_closest_lvl2_chunk
 from nglui import statebuilder as sb
-
-from .parameters import (
-    CONTRAST_LOOKUP,
-    EP_PROOFREADING_TAGS,
-    BP_PROOFREADING_TAGS,
-    GUIDEBOOK_EXPECTED_RESOLUTION,
-)
 
 
 def base_sb_data(
@@ -18,13 +10,14 @@ def base_sb_data(
     focus_loc=None,
     black=None,
     white=None,
-    voxel_resolution=GUIDEBOOK_EXPECTED_RESOLUTION,
+    voxel_resolution=[1, 1, 1],
     view_kws={},
+    contrast_lookup={},
 ):
     if black is None:
-        black = CONTRAST_LOOKUP.get(client.datastack_name, dict()).get("black", 0)
+        black = contrast_lookup.get(client.datastack_name, dict()).get("black", 0)
     if white is None:
-        white = CONTRAST_LOOKUP.get(client.datastack_name, dict()).get("white", 1)
+        white = contrast_lookup.get(client.datastack_name, dict()).get("white", 1)
 
     state_server = client.state.state_service_endpoint
     img = sb.ImageLayerConfig(
@@ -53,7 +46,7 @@ def branch_sb_data(
     set_position=False,
     active=False,
     color="#299bff",
-    voxel_resolution=GUIDEBOOK_EXPECTED_RESOLUTION,
+    voxel_resolution=[1, 1, 1],
 ):
     points_bp = sb.PointMapper(
         point_column="bp_locs", group_column="bp_group", set_position=set_position
@@ -90,7 +83,7 @@ def end_point_sb_data(
     tags=[],
     active=False,
     color="#FFFFFF",
-    voxel_resolution=GUIDEBOOK_EXPECTED_RESOLUTION,
+    voxel_resolution=[1, 1, 1],
     omit_indices=[],
 ):
     points = sb.PointMapper(point_column="ep_locs", set_position=active)
@@ -120,7 +113,7 @@ def selection_point_sb_data(
     direction,
     active=False,
     color="#FF2200",
-    voxel_resolution=GUIDEBOOK_EXPECTED_RESOLUTION,
+    voxel_resolution=[1, 1, 1],
 ):
     points = sb.PointMapper(point_column="pt_locs", set_position=active)
     sp_layer = sb.AnnotationLayerConfig(
@@ -167,7 +160,7 @@ def root_sb_data(
     set_position=False,
     active=False,
     layer_name="root",
-    voxel_resolution=GUIDEBOOK_EXPECTED_RESOLUTION,
+    voxel_resolution=[1, 1, 1],
 ):
     pt = sb.PointMapper(point_column="pt", set_position=set_position)
     root_layer = sb.AnnotationLayerConfig(
@@ -176,7 +169,7 @@ def root_sb_data(
     root_point = sk._rooted.vertices[
         sk._rooted.root
     ]  # Works even if root is not in the skeleton mask
-    root_sb = sb.StateBuilder([root_layer], resolution=GUIDEBOOK_EXPECTED_RESOLUTION)
+    root_sb = sb.StateBuilder([root_layer], resolution=voxel_resolution)
     root_df = pd.DataFrame(
         {
             "pt": (np.atleast_2d(root_point) / np.array(voxel_resolution)).tolist(),
@@ -197,6 +190,9 @@ def topo_point_construction(
     selection_skinds,
     downstream,
     client,
+    ep_proofreading_tags=[],
+    bp_proofreading_tags=[],
+    contrast_lookup={},
 ):
     sbs = []
     dfs = []
@@ -205,6 +201,7 @@ def topo_point_construction(
         client,
         root_id,
         focus_loc=root_point,
+        contrast_lookup=contrast_lookup,
     )
     sbs.append(base_sb)
     dfs.append(base_df)
@@ -222,7 +219,7 @@ def topo_point_construction(
         bp_sb, bp_df = branch_sb_data(
             l2_sk,
             labels=lbls,
-            tags=BP_PROOFREADING_TAGS,
+            tags=bp_proofreading_tags,
             set_position=False,
             active=True,
             voxel_resolution=root_point_resolution,
@@ -234,7 +231,7 @@ def topo_point_construction(
         ep_sb, ep_df = end_point_sb_data(
             l2_sk,
             labels=np.zeros(l2_sk.n_vertices),
-            tags=EP_PROOFREADING_TAGS,
+            tags=ep_proofreading_tags,
             active=False,
             color="#FFFFFF",
             voxel_resolution=root_point_resolution,

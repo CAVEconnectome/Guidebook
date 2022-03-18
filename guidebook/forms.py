@@ -1,6 +1,5 @@
-from collections import defaultdict
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField, BooleanField, SelectField, RadioField
+from wtforms import StringField, SubmitField, BooleanField, SelectField
 from wtforms.validators import Optional, ValidationError
 
 

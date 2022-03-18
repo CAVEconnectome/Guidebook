@@ -1,4 +1,3 @@
-from guidebook.parameters import SHORT_SEGMENT_THRESH, SHOW_PATH_TOOL
 from flask import Blueprint, redirect, request, render_template, url_for, current_app
 from .base import generate_lvl2_proofreading, generate_lvl2_paths
 from .forms import Lvl2PathForm, Lvl2PointForm
@@ -36,7 +35,7 @@ def landing_page():
         "landing.html",
         title=f"Neuron Guidebook",
         datastack=current_app.config.get("DATASTACK"),
-        show_path_tool=SHOW_PATH_TOOL,
+        show_path_tool=current_app.config.get("SHOW_PATH_TOOL", False),
         version=__version__,
     )
 
@@ -95,6 +94,9 @@ def generate_guidebook_chunkgraph(datastack):
         "downstream": downstream,
         "root_id_from_point": root_id_from_point,
         "auth_token_key": current_app.config.get("AUTH_TOKEN_KEY"),
+        "l2cache": current_app.config.get("USE_L2CACHE", False),
+        "ep_tags": current_app.config.get("EP_PROOFREADING_TAGS", []),
+        "bp_tags": current_app.config.get("BP_PROOFREADING_TAGS", []),
     }
     print(kwargs)
     job = q.enqueue_call(
@@ -219,7 +221,7 @@ def lvl2_point_form():
 @bp.route(f"{api_prefix}/datastack/<datastack>/l2paths")
 @auth_required
 def generate_guidebook_paths(datastack):
-    if not SHOW_PATH_TOOL:
+    if not current_app.config.get("SHOW_PATH_TOOL", False):
         raise GuidebookException("Path tool is not enabled")
 
     root_id = request.args.get("root_id", None)
@@ -239,7 +241,7 @@ def generate_guidebook_paths(datastack):
 
     exclude_short = request.args.get("exclude_short", "True") == "True"
     if exclude_short:
-        segment_length_thresh = SHORT_SEGMENT_THRESH
+        segment_length_thresh = current_app.config.get("SHORT_SEGMENT_THRESH", 2_000)
     else:
         segment_length_thresh = 0
 
@@ -265,6 +267,7 @@ def generate_guidebook_paths(datastack):
         "downstream": downstream,
         "root_id_from_point": root_id_from_point,
         "auth_token_key": current_app.config.get("AUTH_TOKEN_KEY"),
+        "l2cache": current_app.config.get("USE_L2CACHE", False),
     }
     print(kwargs)
     job = q.enqueue_call(
@@ -280,7 +283,7 @@ def generate_guidebook_paths(datastack):
 @bp.route("coverpaths", methods=["GET", "POST"])
 @auth_required
 def lvl2_path_form():
-    if not SHOW_PATH_TOOL:
+    if not current_app.config.get("SHOW_PATH_TOOL", False):
         return error_page("Path tool is not enabled")
 
     form = Lvl2PathForm()

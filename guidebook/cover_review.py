@@ -4,12 +4,6 @@ from scipy import interpolate
 from nglui import statebuilder as sb
 from .topo_points import selection_point_sb_data
 
-from .parameters import (
-    CONTRAST_LOOKUP,
-    GUIDEBOOK_EXPECTED_RESOLUTION,
-    PATH_SPACING,
-)
-
 
 def sample_end_points(sk, n_choice=None, target_length=None, ep_segment_thresh=0):
     if target_length is not None:
@@ -34,7 +28,8 @@ def end_points_for_target_length(sk, target_length, ep_segment_thresh):
 
     selected_ep = np.array([], dtype=int)
     net_path_length = 0
-
+    print(net_path_length)
+    print(target_length)
     while net_path_length < target_length and len(selected_ep) < len(eps):
         add_ep = np.random.choice(eps[~np.isin(eps, selected_ep)])
         selected_ep = np.append(selected_ep, add_ep)
@@ -92,7 +87,7 @@ def interpolate_path(
 def generate_path_df(
     paths,
     sk,
-    interp_spacing=PATH_SPACING,
+    interp_spacing=2_000,
     interp_method="linear",
     voxel_resolution=[4, 4, 40],
 ):
@@ -109,9 +104,11 @@ def generate_path_df(
             interp_method=interp_method,
             voxel_resolution=voxel_resolution,
         )
+        path_interp = path_interp[::-1]
 
         ptsA.append(path_interp[:-1])
         ptsB.append(path_interp[1:])
+
         grp.append(grp_ind * np.ones(len(path_interp) - 1))
         grp_ind += 1
 
@@ -127,9 +124,9 @@ def generate_path_df(
     )
 
 
-def base_builder(client, root_id, voxel_resolution):
-    black = CONTRAST_LOOKUP.get(client.datastack_name, dict()).get("black", 0)
-    white = CONTRAST_LOOKUP.get(client.datastack_name, dict()).get("white", 1)
+def base_builder(client, root_id, voxel_resolution, contrast_lookup={}):
+    black = contrast_lookup.get(client.datastack_name, dict()).get("black", 0)
+    white = contrast_lookup.get(client.datastack_name, dict()).get("white", 1)
     img = sb.ImageLayerConfig(
         client.info.image_source(), contrast_controls=True, black=black, white=white
     )
@@ -172,15 +169,18 @@ def construct_cover_paths(
     ep_segment_thresh,
     client,
     target_length=None,
-    voxel_resolution=GUIDEBOOK_EXPECTED_RESOLUTION,
+    voxel_resolution=[1, 1, 1],
     interp_method="linear",
     selection_point=None,
     downstream=True,
+    contrast_lookup={},
 ):
     sbs = []
     dfs = []
 
-    sb_base, df_base = base_builder(client, root_id, voxel_resolution)
+    sb_base, df_base = base_builder(
+        client, root_id, voxel_resolution, contrast_lookup=contrast_lookup
+    )
     sbs.append(sb_base)
     dfs.append(df_base)
 
@@ -200,7 +200,8 @@ def construct_cover_paths(
         target_length=target_length,
         ep_segment_thresh=ep_segment_thresh,
     )
-    paths = l2_sk.cover_paths_specific(eps)
+
+    paths = l2_sk.cover_paths_specific(eps, include_parent=True)
 
     sb_path, df_path = path_layers(
         l2_sk, paths, spacing, interp_method, voxel_resolution

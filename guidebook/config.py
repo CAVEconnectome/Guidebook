@@ -20,6 +20,15 @@ class BaseConfig(object):
             AUTH_TOKEN = json.load(f)[AUTH_TOKEN_KEY]
     else:
         AUTH_TOKEN = None
+    SHOW_PATH_TOOL = os.environ.get("GUIDEBOOK_SHOW_PATH_TOOL", "false") == "true"
+    SHORT_SEGMENT_THRESH = os.environ.get("GUIDEBOOK_SHORT_SEGMENT_THRESH", 15_000)
+    USE_L2CACHE = os.environ.get("USE_L2CACHE", "false") == "true"
+    EP_PROOFREADING_TAGS = ["checked", "error", "correct"]
+    BP_PROOFREADING_TAGS = ["checked", "error"]
+    CONTRAST_LOOKUP = {
+        "minnie65_phase3_v1": {"black": 0.35, "white": 0.7},
+        "v1dd": {"black": 0.35, "white": 0.7},
+    }
 
 
 def configure_app(app):
