@@ -9,10 +9,10 @@ class BaseConfig(object):
     INVALIDATION_D = os.environ.get("GUIDEBOOK_INVALIDATION_D", 3)
     GLOBAL_SERVER_ADDRESS = os.environ.get("GLOBAL_SERVER_ADDRESS", None)
     GUIDEBOOK_EXPECTED_RESOLUTION = os.environ.get(
-        "GUIDEBOOK_EXPECTED_RESOLUTION", "4,4,40"
+        "GUIDEBOOK_EXdPECTED_RESOLUTION", "4,4,40"
     )
     GUIDEBOOK_EXPECTED_RESOLUTION = [
-        r for r in map(int, GUIDEBOOK_EXPECTED_RESOLUTION.split(","))
+        r for r in map(float, GUIDEBOOK_EXPECTED_RESOLUTION.split(","))
     ]
     AUTH_TOKEN_KEY = os.environ.get("AUTH_TOKEN_KEY", "token")
     if os.environ.get("DAF_CREDENTIALS", None) is not None:
