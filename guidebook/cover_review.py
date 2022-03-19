@@ -155,7 +155,9 @@ def path_layers(l2_sk, paths, spacing, interp_method, voxel_resolution):
 
     anno = sb.AnnotationLayerConfig(
         "selected_paths",
-        mapping_rules=sb.LineMapper("ptA", "ptB", group_column="group"),
+        mapping_rules=sb.LineMapper(
+            "ptA", "ptB", group_column="group", set_position=True,
+        ),
     )
 
     return sb.StateBuilder(layers=[anno], resolution=voxel_resolution), df

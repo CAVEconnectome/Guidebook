@@ -1,36 +1,36 @@
 {% extends "base.html" %}
 {% block content %}
-    <h1>Guidebook Covering Paths:</h1>
-    <h3>Select a root id:</h3>
-    <form action="" method="post" target="_blank">
-        {{ form.hidden_tag() }}
-        <p>
-            {{ form.root_id.label }} <br>
-            {{ form.root_id(size=24) }}
-        </p>
-        <p>
-            {{ form.root_location.label }} <br>
-            {{ form.root_location(size=24 )}} <br>
-            {{ form.root_is_soma }}
-            {{ form.root_is_soma.label }} <br>
-            {{ form.root_id_from_root_loc }}
-            {{ form.root_id_from_root_loc.label }}
-        </p>
-        <p>
-            {{ form.split_location.label }} <br>
-            {{ form.split_location(size=24)}} <br>
-            {{ form.split_option}}
-        </p>
-        <p>
-            {{ form.num_paths.label }} <br>
-            {{ form.num_paths}} <br>
-        </p>
-        <p>
-            {{ form.exclude_short }}
-            {{ form.exclude_short.label}} <br>
-        </p>
-        <p>
-            {{ form.submit() }}
-        </p>
-    </form>
+<h1>Guidebook Covering Paths:</h1>
+<h3>Select a root id:</h3>
+<form action="" method="post" target="_blank">
+    {{ form.hidden_tag() }}
+    <p>
+        {{ form.root_id.label }} <br>
+        {{ form.root_id(size=24) }}
+    </p>
+    <p>
+        {{ form.root_location.label }} <br>
+        {{ form.root_location(size=24)}} <br>
+        {{ form.root_is_soma }}
+        {{ form.root_is_soma.label }} <br>
+        {{ form.root_id_from_root_loc }}
+        {{ form.root_id_from_root_loc.label }}
+    </p>
+    <p>
+        {{ form.target_dist.label }} <br>
+        {{ form.target_dist(size=24) }}
+    </p>
+    <p>
+        {{ form.split_location.label }} <br>
+        {{ form.split_location(size=24)}} <br>
+        {{ form.split_option }}
+    </p>
+    <p>
+        {{ form.exclude_short }}
+        {{ form.exclude_short.label}} <br>
+    </p>
+    <p>
+        {{ form.submit() }}
+    </p>
+</form>
 {% endblock %}

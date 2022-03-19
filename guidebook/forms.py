@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField, BooleanField, SelectField
+from wtforms import StringField, SubmitField, BooleanField, SelectField, FloatField
 from wtforms.validators import Optional, ValidationError
 
 
@@ -64,5 +64,7 @@ class Lvl2PathForm(L2SkeletonizeForm):
         ],
         default="all",
     )
-
+    target_dist = FloatField(
+        "Sample Path Length (mm, optional)", default=None, validators=[Optional()]
+    )
     exclude_short = BooleanField("Exclude Short Paths", default=True)

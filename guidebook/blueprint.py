@@ -80,7 +80,7 @@ def generate_guidebook_chunkgraph(datastack):
     kwargs = {
         "datastack": datastack,
         "server_address": current_app.config.get("GLOBAL_SERVER_ADDRESS"),
-        "return_as": "url",
+        "return_as": "short",
         "root_id": root_id,
         "root_point": root_loc,
         "refine_branch_points": branch_points,
@@ -97,6 +97,7 @@ def generate_guidebook_chunkgraph(datastack):
         "l2cache": current_app.config.get("USE_L2CACHE", False),
         "ep_tags": current_app.config.get("EP_PROOFREADING_TAGS", []),
         "bp_tags": current_app.config.get("BP_PROOFREADING_TAGS", []),
+        "contrast_lookup": current_app.config.get("CONTRAST_LOOKUP", {}),
     }
     print(kwargs)
     job = q.enqueue_call(
@@ -133,7 +134,7 @@ def show_result_points(job_key):
 @bp.route("coverpaths/results/<job_key>")
 @auth_required
 def show_result_paths(job_key):
-    reload_time = 60
+    reload_time = 20
     try:
         job = Job.fetch(job_key, connection=conn)
         if job.is_finished:
@@ -235,9 +236,9 @@ def generate_guidebook_paths(datastack):
     root_id_from_point = request.args.get("root_id_from_point") == "True"
     spacing = request.args.get("spacing", 3000)
 
-    num_paths_raw = request.args.get("num_paths", "all")
-    num_path_dict = {"all": "all", "5": 5, "10": 10, "15": 15}
-    num_paths = num_path_dict.get(num_paths_raw, "all")
+    target_length = request.args.get("target_length", None)
+    if target_length is not None:
+        target_length = int(target_length)
 
     exclude_short = request.args.get("exclude_short", "True") == "True"
     if exclude_short:
@@ -246,18 +247,18 @@ def generate_guidebook_paths(datastack):
         segment_length_thresh = 0
 
     root_point_resolution = current_app.config.get(
-        "GUIDEBOOK_EXPECTED_RESOLUTION", [4, 4, 40]
+        "GUIDEBOOK_EXPECTED_RESOLUTION", [1, 1, 1]
     )
     print(f"Resolution: {root_point_resolution}")
 
     kwargs = {
         "datastack": datastack,
         "server_address": current_app.config.get("GLOBAL_SERVER_ADDRESS"),
-        "return_as": "url",
         "root_id": root_id,
         "root_point": root_loc,
         "root_point_resolution": root_point_resolution,
-        "n_choice": num_paths,
+        "n_choice": "all",
+        "return_as": "short",
         "segment_length_thresh": segment_length_thresh,
         "spacing": int(spacing),
         "collapse_soma": collapse_soma,
@@ -268,6 +269,8 @@ def generate_guidebook_paths(datastack):
         "root_id_from_point": root_id_from_point,
         "auth_token_key": current_app.config.get("AUTH_TOKEN_KEY"),
         "l2cache": current_app.config.get("USE_L2CACHE", False),
+        "target_length": target_length,
+        "contrast_lookup": current_app.config.get("CONTRAST_LOOKUP", {}),
     }
     print(kwargs)
     job = q.enqueue_call(
@@ -307,6 +310,10 @@ def lvl2_path_form():
             downstream = False
         root_id_from_point = form.root_id_from_root_loc.data
 
+        target_length = form.target_dist.data
+        if target_length is not None:
+            target_length = int(1_000_000 * target_length)
+
         num_paths_raw = form.num_paths.data
         num_path_dict = {"all": "all", "five": 5, "ten": 10, "fifteen": 15}
         num_paths = num_path_dict.get(num_paths_raw, "all")
@@ -325,6 +332,7 @@ def lvl2_path_form():
             split_location=split_location_formatted,
             downstream=downstream,
             root_id_from_point=root_id_from_point,
+            target_length=target_length,
         )
         return redirect(url)
 

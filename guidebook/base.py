@@ -8,6 +8,11 @@ from .topo_points import topo_point_construction
 from .cover_review import construct_cover_paths
 
 
+def link_shortened_state(state, client):
+    state_id = client.state.upload_state_json(state)
+    return client.state.build_neuroglancer_url(state_id)
+
+
 def mask_skeleton(
     root_id, sk, l2dict, selection_point, downstream, client, voxel_resolution, radius
 ):
@@ -54,6 +59,7 @@ def generate_lvl2_paths(
     return_as="url",
     verbose=True,
     l2cache=False,
+    target_length=None,
     contrast_lookup={},
 ):
     if verbose:
@@ -111,15 +117,22 @@ def generate_lvl2_paths(
         interp_method=interp_method,
         selection_point=selection_point,
         contrast_lookup=contrast_lookup,
+        target_length=target_length,
     )
 
     csb = sb.ChainedStateBuilder(sbs)
     if verbose:
         print("\nComplete time: ", time.time() - t0)
 
-    return csb.render_state(
-        dfs, return_as=return_as, url_prefix=client.info.viewer_site()
-    )
+    if return_as == "short":
+        state = csb.render_state(
+            dfs, return_as="dict", url_prefix=client.info.viewer_site()
+        )
+        return link_shortened_state(state, client)
+    else:
+        return csb.render_state(
+            dfs, return_as=return_as, url_prefix=client.info.viewer_site()
+        )
 
 
 def generate_lvl2_proofreading(
@@ -217,9 +230,17 @@ def generate_lvl2_proofreading(
         bp_proofreading_tags=bp_tags,
     )
 
-    sb_pf = sb.ChainedStateBuilder(sbs)
     if verbose:
         print("\nComplete time: ", time.time() - t0)
-    return sb_pf.render_state(
-        dfs, return_as=return_as, url_prefix=client.info.viewer_site()
-    )
+
+    sb_pf = sb.ChainedStateBuilder(sbs)
+
+    if return_as == "short":
+        state = sb_pf.render_state(
+            dfs, return_as="dict", url_prefix=client.info.viewer_site()
+        )
+        return link_shortened_state(state, client)
+    else:
+        return sb_pf.render_state(
+            dfs, return_as=return_as, url_prefix=client.info.viewer_site()
+        )
