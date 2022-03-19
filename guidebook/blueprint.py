@@ -73,7 +73,7 @@ def generate_guidebook_chunkgraph(datastack):
     root_id_from_point = request.args.get("root_id_from_point") == "True"
 
     root_point_resolution = current_app.config.get(
-        "GUIDEBOOK_EXPECTED_RESOLUTION", [4, 4, 40]
+        "GUIDEBOOK_EXPECTED_RESOLUTION", [1, 1, 1]
     )
     print(f"Resolution: {root_point_resolution}")
 

@@ -9,7 +9,7 @@ class BaseConfig(object):
     INVALIDATION_D = os.environ.get("GUIDEBOOK_INVALIDATION_D", 3)
     GLOBAL_SERVER_ADDRESS = os.environ.get("GLOBAL_SERVER_ADDRESS", None)
     GUIDEBOOK_EXPECTED_RESOLUTION = os.environ.get(
-        "GUIDEBOOK_EXdPECTED_RESOLUTION", "4,4,40"
+        "GUIDEBOOK_EXPECTED_RESOLUTION", "1,1,1"
     )
     GUIDEBOOK_EXPECTED_RESOLUTION = [
         r for r in map(float, GUIDEBOOK_EXPECTED_RESOLUTION.split(","))
