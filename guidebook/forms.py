@@ -19,6 +19,7 @@ class L2SkeletonizeForm(FlaskForm):
             ("upstream", "Inward from point"),
             ("downstream", "Outward from point"),
         ],
+        default="downstream",
     )
     submit = SubmitField("Generate Neuroglancer Link")
     segmentation_fallback = BooleanField(
