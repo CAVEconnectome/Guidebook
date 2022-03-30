@@ -98,6 +98,7 @@ def generate_guidebook_chunkgraph(datastack):
         "ep_tags": current_app.config.get("EP_PROOFREADING_TAGS", []),
         "bp_tags": current_app.config.get("BP_PROOFREADING_TAGS", []),
         "contrast_lookup": current_app.config.get("CONTRAST_LOOKUP", {}),
+        "cv_use_https": current_app.config.get("CV_USE_HTTPS", True),
     }
     print(kwargs)
     job = q.enqueue_call(
@@ -271,6 +272,7 @@ def generate_guidebook_paths(datastack):
         "l2cache": current_app.config.get("USE_L2CACHE", False),
         "target_length": target_length,
         "contrast_lookup": current_app.config.get("CONTRAST_LOOKUP", {}),
+        "cv_use_https": current_app.config.get("CV_USE_HTTPS", True),
     }
     print(kwargs)
     job = q.enqueue_call(

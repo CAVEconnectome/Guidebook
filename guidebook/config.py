@@ -29,6 +29,7 @@ class BaseConfig(object):
         "minnie65_phase3_v1": {"black": 0.35, "white": 0.7},
         "v1dd": {"black": 0.35, "white": 0.7},
     }
+    CV_USE_HTTPS = not (os.environ.get("CV_USE_HTTPS", "true") == "false")
 
 
 def configure_app(app):

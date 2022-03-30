@@ -61,6 +61,7 @@ def generate_lvl2_paths(
     l2cache=False,
     target_length=None,
     contrast_lookup={},
+    cv_use_https=True,
 ):
     if verbose:
         t0 = time.time()
@@ -69,7 +70,7 @@ def generate_lvl2_paths(
         datastack, server_address=server_address, auth_token_key=auth_token_key
     )
 
-    cv = client.info.segmentation_cloudvolume(use_https=True, progress=True)
+    cv = client.info.segmentation_cloudvolume(use_https=cv_use_https)
 
     if root_id_from_point and root_id is None:
         root_id = get_root_id_from_point(root_point, root_point_resolution, client)
@@ -158,13 +159,14 @@ def generate_lvl2_proofreading(
     contrast_lookup={},
     ep_tags=[],
     bp_tags=[],
+    cv_use_https=True,
 ):
     if verbose:
         t0 = time.time()
     client = CAVEclient(
         datastack, server_address=server_address, auth_token_key=auth_token_key
     )
-    cv = client.info.segmentation_cloudvolume(use_https=True, progress=True)
+    cv = client.info.segmentation_cloudvolume(use_https=cv_use_https)
 
     if refine_end_points and refine_branch_points:
         refine = "bpep"
