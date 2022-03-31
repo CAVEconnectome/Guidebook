@@ -70,7 +70,10 @@ def generate_lvl2_paths(
         datastack, server_address=server_address, auth_token_key=auth_token_key
     )
 
-    cv = client.info.segmentation_cloudvolume(use_https=cv_use_https)
+    # If not using https, also use local secrets not client secrets in guidebook to avoid permissions errors
+    cv = client.info.segmentation_cloudvolume(
+        use_client_secret=cv_use_https, use_https=cv_use_https
+    )
 
     if root_id_from_point and root_id is None:
         root_id = get_root_id_from_point(root_point, root_point_resolution, client)
@@ -166,8 +169,9 @@ def generate_lvl2_proofreading(
     client = CAVEclient(
         datastack, server_address=server_address, auth_token_key=auth_token_key
     )
-    cv = client.info.segmentation_cloudvolume(use_https=cv_use_https)
-
+    cv = client.info.segmentation_cloudvolume(
+        use_client_secret=cv_use_https, use_https=cv_use_https
+    )
     if refine_end_points and refine_branch_points:
         refine = "bpep"
     elif refine_end_points is False:
