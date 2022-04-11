@@ -10,6 +10,6 @@ meshparty>=1.16.0
 pcg_skel>=0.2.2
 cloud-volume
 fastremap
-middle-auth-client>=3.6.4
+middle-auth-client>=3.11.0
 redis
 rq

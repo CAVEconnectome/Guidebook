@@ -28,14 +28,11 @@ def end_points_for_target_length(sk, target_length, ep_segment_thresh):
 
     selected_ep = np.array([], dtype=int)
     net_path_length = 0
-    print(net_path_length)
-    print(target_length)
     while net_path_length < target_length and len(selected_ep) < len(eps):
         add_ep = np.random.choice(eps[~np.isin(eps, selected_ep)])
         selected_ep = np.append(selected_ep, add_ep)
         cps = sk.cover_paths_specific(selected_ep)
         net_path_length = sum([sk.path_length(p) for p in cps])
-
     return selected_ep
 
 
@@ -156,7 +153,10 @@ def path_layers(l2_sk, paths, spacing, interp_method, voxel_resolution):
     anno = sb.AnnotationLayerConfig(
         "selected_paths",
         mapping_rules=sb.LineMapper(
-            "ptA", "ptB", group_column="group", set_position=True,
+            "ptA",
+            "ptB",
+            group_column="group",
+            set_position=True,
         ),
     )
 

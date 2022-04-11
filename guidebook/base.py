@@ -62,6 +62,7 @@ def generate_lvl2_paths(
     target_length=None,
     contrast_lookup={},
     cv_use_https=True,
+    progress=False,
 ):
     if verbose:
         t0 = time.time()
@@ -72,7 +73,9 @@ def generate_lvl2_paths(
 
     # If not using https, also use local secrets not client secrets in guidebook to avoid permissions errors
     cv = client.info.segmentation_cloudvolume(
-        use_client_secret=cv_use_https, use_https=cv_use_https
+        use_client_secret=cv_use_https,
+        use_https=cv_use_https,
+        progress=progress,
     )
 
     if root_id_from_point and root_id is None:
@@ -163,6 +166,7 @@ def generate_lvl2_proofreading(
     ep_tags=[],
     bp_tags=[],
     cv_use_https=True,
+    progress=False,
 ):
     if verbose:
         t0 = time.time()
@@ -170,7 +174,9 @@ def generate_lvl2_proofreading(
         datastack, server_address=server_address, auth_token_key=auth_token_key
     )
     cv = client.info.segmentation_cloudvolume(
-        use_client_secret=cv_use_https, use_https=cv_use_https
+        use_client_secret=cv_use_https,
+        use_https=cv_use_https,
+        progress=progress,
     )
     if refine_end_points and refine_branch_points:
         refine = "bpep"
