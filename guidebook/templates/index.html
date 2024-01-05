@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block header %}
+    <div>
+        <h1>Neuron Guidebook:</h1>
+        <h4>Select a Datastack:</h4>
+   </div>
+{% endblock %}
+
+{% block content %}
+    {% for datastack in datastacks %}
+        <p>
+            <a href="{{url_for('guidebook.datastack_page', datastack=datastack)}}" >{{datastack}}</a>
+        </p>
+    {% endfor %}
+{% endblock %}

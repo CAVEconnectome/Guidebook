@@ -1,7 +1,8 @@
-version: "3"
+version: "4"
 services:
   app:
     image: "guidebook:tag"
+    platform: linux/amd64
     build:
       context: .
       dockerfile: Dockerfile
@@ -10,16 +11,17 @@ services:
     volumes:
       - ~/.cloudvolume:/home/nginx/.cloudvolume
     env_file:
-      - ./.env.v1dd
+      - ./.env.minnie
   worker:
     image: "guidebook:tag"
+    platform: linux/amd64 
     build:
       context: .
       dockerfile: Dockerfile
     volumes:
       - ~/.cloudvolume:/root/.cloudvolume
     env_file:
-      - ./.env.v1dd
+      - ./.env.minnie
     command: python guidebook/worker.py
   redis:
     image: redis:latest

@@ -1,6 +1,7 @@
 from flask import Blueprint, redirect, request, render_template, url_for, current_app
 from .base import generate_lvl2_proofreading, generate_lvl2_paths
 from .forms import Lvl2PathForm, Lvl2PointForm
+from .utils import make_client, make_global_client
 import numpy as np
 from middle_auth_client import auth_required
 import re
@@ -8,8 +9,8 @@ from rq import Queue, Retry
 from rq.job import Job
 from .worker import conn
 
-api_version = 0
-url_prefix = f"/guidebook"
+api_version = 1
+url_prefix = "/guidebook"
 api_prefix = f"/api/v{api_version}"
 
 
@@ -29,12 +30,27 @@ def version_text():
 
 
 @bp.route("/")
-@auth_required
+@auth_required()
 def landing_page():
+    client = make_global_client(
+        server_address=current_app.config.get("GLOBAL_SERVER_ADDRESS"),
+    )
+    datastacks = client.info.get_datastacks()
     return render_template(
-        "landing.html",
-        title=f"Neuron Guidebook",
-        datastack=current_app.config.get("DATASTACK"),
+        "index.html",
+        title="Neuron Guidebook",
+        datastacks= sorted(datastacks),
+        version=__version__,
+    )
+
+
+@bp.route(f"datastack/<datastack>/")
+@auth_required
+def datastack_page(datastack):
+    return render_template(
+        "datastack_page.html",
+        title="Neuron Guidebook",
+        datastack=datastack,
         show_path_tool=current_app.config.get("SHOW_PATH_TOOL", False),
         version=__version__,
     )
@@ -111,7 +127,7 @@ def generate_guidebook_chunkgraph(datastack):
     return redirect(url_for(".show_result_points", job_key=job.get_id()))
 
 
-@bp.route("skeletonize/results/<job_key>")
+@bp.route(f"results/points/<job_key>")
 @auth_required
 def show_result_points(job_key):
     reload_time = 10
@@ -132,7 +148,7 @@ def show_result_points(job_key):
         return error_page(str(e))
 
 
-@bp.route("coverpaths/results/<job_key>")
+@bp.route(f"results/paths/<job_key>")
 @auth_required
 def show_result_paths(job_key):
     reload_time = 20
@@ -163,12 +179,11 @@ def wait_page(reload_time):
     )
 
 
-@bp.route("skeletonize", methods=["GET", "POST"])
+@bp.route(f"datastack/<datastack>/skeletonize", methods=["GET", "POST"])
 @auth_required
-def lvl2_point_form():
+def lvl2_point_form(datastack):
     form = Lvl2PointForm()
     if form.validate_on_submit():
-        datastack = current_app.config.get("DATASTACK")
         root_id = form.root_id.data
         if len(root_id) == 0:
             root_id = None
@@ -285,15 +300,14 @@ def generate_guidebook_paths(datastack):
     return redirect(url_for(".show_result_paths", job_key=job.get_id()))
 
 
-@bp.route("coverpaths", methods=["GET", "POST"])
+@bp.route(f"{api_prefix}/datastack/<datastack>/coverpaths", methods=["GET", "POST"])
 @auth_required
-def lvl2_path_form():
+def lvl2_path_form(datastack):
     if not current_app.config.get("SHOW_PATH_TOOL", False):
         return error_page("Path tool is not enabled")
 
     form = Lvl2PathForm()
     if form.validate_on_submit():
-        datastack = current_app.config.get("DATASTACK")
         root_id = form.root_id.data
         if len(root_id) == 0:
             root_id = None
