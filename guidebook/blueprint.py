@@ -1,7 +1,7 @@
 from flask import Blueprint, redirect, request, render_template, url_for, current_app
 from .base import generate_lvl2_proofreading, generate_lvl2_paths
 from .forms import Lvl2PathForm, Lvl2PointForm
-from .utils import make_client, make_global_client
+from .utils import make_global_client, get_datastacks
 import numpy as np
 from middle_auth_client import auth_required
 import re
@@ -23,7 +23,6 @@ q = Queue(connection=conn)
 class GuidebookException(Exception):
     pass
 
-
 @bp.route("/version")
 def version_text():
     return f"Neuron Guidebook v.{__version__}"
@@ -35,7 +34,7 @@ def landing_page():
     client = make_global_client(
         server_address=current_app.config.get("GLOBAL_SERVER_ADDRESS"),
     )
-    datastacks = client.info.get_datastacks()
+    datastacks = get_datastacks(client)
     return render_template(
         "index.html",
         title="Neuron Guidebook",

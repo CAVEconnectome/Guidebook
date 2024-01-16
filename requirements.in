@@ -11,5 +11,6 @@ pcg_skel>=0.3.5
 cloud-volume
 fastremap
 middle-auth-client>=3.11.0
+cachetools
 redis
 rq
