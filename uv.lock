@@ -1820,7 +1820,7 @@ wheels = [
 
 [[package]]
 name = "neuroglancer"
-version = "2.40.1"
+version = "2.41.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "atomicwrites" },
@@ -1831,17 +1831,17 @@ dependencies = [
     { name = "requests" },
     { name = "tornado" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fe/68/600011755c7873d69431c2662bf631414e417d283b8cc7976dfa66178800/neuroglancer-2.40.1.tar.gz", hash = "sha256:ba21309827810d669a2f76e7b814a123aafeb61b7cb07b2de11a9663ad902fdc", size = 3640302, upload-time = "2024-07-23T20:24:34.827Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3d/8f/0d592fe1f0433c4c6428c5023b38c96b398c9f605091c096dcd92f8198c9/neuroglancer-2.41.2.tar.gz", hash = "sha256:2c519da54169d141053e14940115f4b4cbdf88d24a9114cd3ae236ea62f16216", size = 4824993, upload-time = "2025-09-23T20:01:23.776Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/59/52/3890bdc3345a1885a6eac6d4b982124d4820c11b706ce179b76c26b3eaea/neuroglancer-2.40.1-cp39-abi3-macosx_10_9_x86_64.whl", hash = "sha256:73b214772263005e2531dab6051ed1f4d5cd4c4f1c6eb181b9baf704ecb6f3f3", size = 3649794, upload-time = "2024-07-23T20:24:25.667Z" },
-    { url = "https://files.pythonhosted.org/packages/a7/37/214037aec09f43e1854173fc338eb5f20f2b2f6d57ccf9dfc9f4032b1567/neuroglancer-2.40.1-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:7466279b2cad28465edc727b994949599d2f0ece9ca22cee05bfa30c1d63a1ac", size = 3644923, upload-time = "2024-07-23T20:24:28.251Z" },
-    { url = "https://files.pythonhosted.org/packages/2f/a2/e0e01c70d7a6804eb00faeb901af341ca5518b9d58c444c133d300c48b83/neuroglancer-2.40.1-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:b5cb9583b1668aad49c092bb047d6e74959bb3b5b343d5a624f084d82f3ede60", size = 5138950, upload-time = "2024-07-23T20:24:29.989Z" },
-    { url = "https://files.pythonhosted.org/packages/23/d9/29ae513f60f0d972789453f14b22753d9becc303f0ad7e797cf6b4878580/neuroglancer-2.40.1-cp39-abi3-win_amd64.whl", hash = "sha256:dc70a9dcd438c763515a2ca36135d10a49bd3261ac3fcf0b9183c03411554295", size = 3622988, upload-time = "2024-07-23T20:24:31.834Z" },
+    { url = "https://files.pythonhosted.org/packages/79/04/f0669059db552d2e99d2e56f19260088822baf578e1172b055ac2ea5b227/neuroglancer-2.41.2-cp310-abi3-macosx_10_9_x86_64.whl", hash = "sha256:39602ba0c3146384c9c4ff78e36c2154c5fb72f07ffefaec24946e64aea5c5b9", size = 4467803, upload-time = "2025-09-23T20:01:18.368Z" },
+    { url = "https://files.pythonhosted.org/packages/fd/31/aeeb597e920204d970f0b304a0bff6cd1d37a60919466ddd21aae4fb7a71/neuroglancer-2.41.2-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:ef17138bc2b53556ed5026049127eb1b607c7d6ad7e6b8700d7ef7deab36938e", size = 4463039, upload-time = "2025-09-23T20:01:20.099Z" },
+    { url = "https://files.pythonhosted.org/packages/aa/05/8a699e19dc5f3549042cac25aa378240c9850ef453ff63609a91d256748b/neuroglancer-2.41.2-cp310-abi3-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:fbfab095d4e11c103c6beb4109aaa6f6bd910cf187e406bc181e53a66721a08b", size = 5984442, upload-time = "2025-09-23T20:01:21.39Z" },
+    { url = "https://files.pythonhosted.org/packages/d1/9c/a80447cd627af8cec3263ddb5591aa58dd85ec73b4cfd051eeea2fe2f883/neuroglancer-2.41.2-cp310-abi3-win_amd64.whl", hash = "sha256:7d26c83429b753969fc19b52ec49da34cd14369ec7aeba49d104b3e0514e5cd1", size = 4437158, upload-time = "2025-09-23T20:01:22.6Z" },
 ]
 
 [[package]]
 name = "nglui"
-version = "4.3.1"
+version = "4.8.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "attrs" },
@@ -1852,14 +1852,15 @@ dependencies = [
     { name = "numpy" },
     { name = "palettable" },
     { name = "pandas" },
+    { name = "pyperclip" },
     { name = "python-box" },
     { name = "requests" },
     { name = "six" },
     { name = "webcolors" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3c/7e/411accd7aa5918fa0a9f8f7fc7fc2ccdc0adecadf6e1c9711ebb2543a5c9/nglui-4.3.1.tar.gz", hash = "sha256:3720cce74047a8bcc86206afb45450b06e91f315f0fcee0f565a34e65b34c548", size = 1139893, upload-time = "2025-06-26T05:34:09.813Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/8f/22/7795cd7768c24653c9b996c33e2822ebee950486ad976e39c4d7402a3f12/nglui-4.8.0.tar.gz", hash = "sha256:de693e76c6ad855cdd66d731f40ccb1901e3cc36c7eebe9276920ad7eb314cb8", size = 1225246, upload-time = "2026-09-11T22:25:00.627Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0d/cc/bee9ae81dd137cbaaf98e15e2349c91fe162789d4ecad3dc10e5675a195b/nglui-4.3.1-py3-none-any.whl", hash = "sha256:88a69e5d0e3ecd11399df0ed1ee5b1adcdbd46e9a036517e7c9ffa62bdd5b191", size = 52187, upload-time = "2025-06-26T05:34:08.394Z" },
+    { url = "https://files.pythonhosted.org/packages/cd/13/c7bc1219b93dbf1dabf0e512922d3c56ebf3ee5881b37a3b5dbcb56b1111/nglui-4.8.0-py3-none-any.whl", hash = "sha256:564fdd155acdb95646857070b7c9feb9a9a9bcfc70cf42075fc16cede521285e", size = 77193, upload-time = "2026-09-11T22:24:59.458Z" },
 ]
 
 [[package]]
@@ -2547,6 +2548,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/bb/22/f1129e69d94ffff626bdb5c835506b3a5b4f3d070f17ea295e12c2c6f60f/pyparsing-3.2.3.tar.gz", hash = "sha256:b9c13f1ab8b3b542f72e28f634bad4de758ab3ce4546e4301970ad6fa77c38be", size = 1088608, upload-time = "2025-03-25T05:01:28.114Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/05/e7/df2285f3d08fee213f2d041540fa4fc9ca6c2d44cf36d3a035bf2a8d2bcc/pyparsing-3.2.3-py3-none-any.whl", hash = "sha256:a749938e02d6fd0b59b356ca504a24982314bb090c383e3cf201c95ef7e2bfcf", size = 111120, upload-time = "2025-03-25T05:01:24.908Z" },
+]
+
+[[package]]
+name = "pyperclip"
+version = "1.11.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e8/52/d87eba7cb129b81563019d1679026e7a112ef76855d6159d24754dbd2a51/pyperclip-1.11.0.tar.gz", hash = "sha256:244035963e4428530d9e3a6101a1ef97209c6825edab1567beac148ccc1db1b6", size = 12185, upload-time = "2025-09-26T14:40:37.245Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/df/80/fc9d01d5ed37ba4c42ca2b55b4339ae6e200b456be3a1aaddf4a9fa99b8c/pyperclip-1.11.0-py3-none-any.whl", hash = "sha256:299403e9ff44581cb9ba2ffeed69c7aa96a008622ad0c46cb575ca75b5b84273", size = 11063, upload-time = "2025-09-26T14:40:36.069Z" },
 ]
 
 [[package]]
@@ -3277,7 +3287,7 @@ requires-dist = [
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "meshparty", specifier = ">=2.0.1" },
     { name = "middle-auth-client", specifier = ">=3.18.1" },
-    { name = "nglui", specifier = ">=4.3.1" },
+    { name = "nglui", specifier = ">=4.8.0" },
     { name = "numpy", specifier = ">=2.2.3" },
     { name = "orjson", specifier = ">=3.10.14" },
     { name = "pandas", specifier = ">=2.2.3" },
